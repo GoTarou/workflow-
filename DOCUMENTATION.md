@@ -1,3 +1,21 @@
+## Summary
+
+- Workflow app
+  - Role-based access (Admin, Approver, User) with session auth.
+  - Document management: upload, preview (PDF.js), view, edit, archive.
+  - Requests: create, list, view details, delete (admin).
+  - Approvals: approver dashboard with approve/reject and history.
+  - Departments and approvers management for routing.
+  - Analytics dashboard with date-range KPIs.
+
+- Machine Learning
+  - Department detection model: text classification to infer department from user messages.
+  - Linear regression models: predict approval time and success rate; expose feature importance and insights.
+  - ML endpoints:
+    - Train/predict workflow metrics; analyze patterns; export data; model status.
+    - Predict approval time/success rate; feature importance; generate insights.
+  - Artifacts: scalers/encoders and models stored in `models/`; training samples via CSV.
+
 ## Frontend API Usage Overview
 
 This document summarizes what was built and exactly which backend APIs the frontend calls, grouped by page. It includes HTTP methods, paths, expected payloads, and where each call is used in the UI templates.
