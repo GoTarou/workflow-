@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# OS/Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Flask sessions/uploads
+flask_session/
+uploads/
+
+# Models and data (optional – keep out if sensitive)
+models/*.pkl
+models/*.json
+models/*.csv
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+

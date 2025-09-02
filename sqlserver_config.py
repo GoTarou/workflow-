@@ -1,15 +1,17 @@
+import os
+
 # SQL Server Configuration for Document Workflow System
-# Update these values according to your SQL Server setup
+# Values read from environment variables for public repositories
 
 # SQL Server Instance Details
-SQL_SERVER = 'GOTARUO\\MSSQLSERVER01'  # Your SQL Server instance name
-SQL_DATABASE = 'WorkflowDB'  # Database name (will be created if it doesn't exist)
+SQL_SERVER = os.getenv('SQL_SERVER', 'localhost')  # Your SQL Server instance name
+SQL_DATABASE = os.getenv('SQL_DATABASE', 'WorkflowDB')  # Database name (will be created if it doesn't exist)
 
 # Authentication Method
 # Option 1: Windows Authentication (Recommended for development)
-USE_WINDOWS_AUTH = True
-SQL_USERNAME = ''  # Leave empty for Windows Authentication
-SQL_PASSWORD = ''  # Leave empty for Windows Authentication
+USE_WINDOWS_AUTH = os.getenv('USE_WINDOWS_AUTH', 'True').lower() == 'true'
+SQL_USERNAME = os.getenv('SQL_USERNAME', '')  # Leave empty for Windows Authentication
+SQL_PASSWORD = os.getenv('SQL_PASSWORD', '')  # Leave empty for Windows Authentication
 
 # Option 2: SQL Server Authentication (Uncomment and configure if needed)
 # USE_WINDOWS_AUTH = False
@@ -25,7 +27,7 @@ SQL_MAX_OVERFLOW = 20  # Maximum overflow connections
 # Make sure you have the appropriate ODBC driver installed
 # For SQL Server 2019+: ODBC Driver 17 for SQL Server
 # For SQL Server 2016: ODBC Driver 13 for SQL Server
-ODBC_DRIVER = 'ODBC Driver 17 for SQL Server'
+ODBC_DRIVER = os.getenv('ODBC_DRIVER', 'ODBC Driver 17 for SQL Server')
 
 # Alternative drivers (uncomment if needed):
 # ODBC_DRIVER = 'ODBC Driver 13 for SQL Server'  # For SQL Server 2016

@@ -5,7 +5,8 @@ import json
 
 class RouterAIConfig:
     def __init__(self):
-        self.api_key = "AIzaSyA9Q9fzNf9kw0Zru-6k6Zaua4yxx2XK-9A"
+        # Read from environment in public repositories; avoid hardcoding secrets
+        self.api_key = os.getenv("GEMINI_API_KEY", "")
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models"
         self.mock_mode = False  # Now using real Gemini AI API
         

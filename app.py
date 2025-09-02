@@ -19,7 +19,8 @@ from linear_regression_workflow import LinearRegressionWorkflow
 from department_detection import DepartmentDetection
 
 app = Flask(__name__, static_folder='static')
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+# Load secret key from environment for public repositories. Do NOT hardcode secrets.
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'change-me-in-prod')
 
 # SQL Server Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = get_flask_sqlalchemy_uri()
@@ -2784,6 +2785,6 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("🔧 Database tables created/updated")
-        print(f"🔧 Flask app secret key: {app.config['SECRET_KEY']}")
+        # Do not print secrets in logs for public repositories
         print(f"🔧 Flask app name: {app.name}")
     app.run(debug=True)

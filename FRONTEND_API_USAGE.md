@@ -256,4 +256,12 @@ Notes
 - Analytics: `templates/analytics.html`
 - Admin Users (ML utilities): `templates/admin_users.html`
 
+---
+
+## Security & Public Repo Notes
+- Do not hardcode secrets. The app reads `FLASK_SECRET_KEY`, `GEMINI_API_KEY`, and DB settings from environment variables.
+- Avoid committing real connection strings, passwords, personal emails, or API keys.
+- Sensitive/runtime files are excluded via `.gitignore` (e.g., `.env`, `flask_session/`, `uploads/`, `node_modules/`).
+- Provide a `.env` locally; for CI/CD, configure secrets at the platform level.
+
 
