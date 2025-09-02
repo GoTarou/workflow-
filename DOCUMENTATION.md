@@ -18,6 +18,47 @@
 
 ## Frontend API Usage Overview
 
+---
+
+## Database: workflow_flow_display
+
+The `workflow_flow_display` table materializes a request's approval path into ordered, readable steps for UI and analytics. Each row represents one step in the flow for a specific request.
+
+- Purpose: power detailed views, timeline cards, and debugging/analytics of approval progress
+- Row granularity: one row per request step
+- Ordering: `step_number` ascending shows the sequence
+
+Columns
+- `id`: surrogate key for this display row
+- `request_id`: the workflow request this step belongs to
+- `step_number`: ordinal position of the step (1..N)
+- `step_name`: descriptive name (e.g., User (Submitter), General Approver, HR Department Approver, Admin)
+- `user_id`, `username`: the assigned user for the step
+- `role`: functional role for the step (user, general_approver, department_approver, admin)
+- `department`: department context for the step (Sales, IT, HR, Admin, General)
+- `status`: current step state (pending, completed, etc.)
+- `created_at`: timestamp when this display row (or the step record) was created
+
+Example query (as in SSMS):
+```sql
+SELECT TOP (1000) [id], [request_id], [step_number], [step_name],
+       [user_id], [username], [role], [department], [status], [created_at]
+FROM [WorkflowDB].[dbo].[workflow_flow_display];
+```
+
+How to read the sample result
+- For `request_id = 1023`:
+  - step 0: User (Submitter) by `user1` in Sales — status completed
+  - step 1: General Approver — status pending
+  - step 2: IT Department Approver — status pending
+  - step 3: Admin — status pending
+- For `request_id = 1024`: analogous steps with HR Department Approver in the chain
+
+Notes
+- The table is derived from core entities (Requests, Department Approvers, Users, Approvals) to present a flattened, per-step display.
+- The UI uses this to render the ordered steps and status badges; analytics can aggregate by `status`, `department`, or `role` to find bottlenecks.
+
+
 This document summarizes what was built and exactly which backend APIs the frontend calls, grouped by page. It includes HTTP methods, paths, expected payloads, and where each call is used in the UI templates.
 
 ### What was built
