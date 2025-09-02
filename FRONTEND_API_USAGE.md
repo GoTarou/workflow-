@@ -190,6 +190,53 @@ Note: This page also exercises ML endpoints in the backend.
 
 ---
 
+## Machine Learning usage
+
+This project uses classical ML models and utilities to enhance routing, forecasting, insights, and suggestions:
+
+- Model artifacts (saved): see `models/`
+  - `approval_time_model.pkl`, `approval_time_scaler.pkl`: Linear Regression model to predict approval time
+  - `success_rate_model.pkl`, `success_rate_scaler.pkl`: Linear Regression model to predict success rate
+  - `department_detection_model.pkl`, `department_detection_vectorizer.pkl`: Text classification to detect department from free text
+  - `department_encoder.pkl`, `priority_encoder.pkl`, `scaler.pkl`, `feature_names.json`: encoders/scalers and feature list
+
+- Training data/examples
+  - `static/sample_training_data.csv` and `sample_training_data.csv`
+  - Features are aligned with `models/feature_names.json`
+
+- ML workflow endpoints (consumed from admin tools and internal flows)
+  - POST `/api/ml/train`: Trains/updates ML workflow progression models
+  - POST `/api/ml/predict`: Predicts workflow metrics from provided features
+  - POST `/api/ml/suggest-workflow`: Generates suggested multi-step workflows from a request description
+  - GET `/api/ml/analyze-patterns`: Returns discovered patterns/insights
+  - POST `/api/ml/export-data`: Exports current training/evaluation data
+  - GET `/api/ml/model-status`: Returns training and model metadata
+
+- Linear Regression endpoints (time/success forecasting)
+  - POST `/api/linear-regression/train-approval-time`: Train approval time regressor
+  - POST `/api/linear-regression/train-success-rate`: Train success rate regressor
+  - POST `/api/linear-regression/predict-approval-time`: Predict approval time
+  - POST `/api/linear-regression/predict-success-rate`: Predict success probability
+  - GET `/api/linear-regression/feature-importance`: Feature weights/importance
+  - POST `/api/linear-regression/generate-insights`: Human-readable insights from coefficients
+
+- Department detection (text ML)
+  - GET `/api/department-detect/model-status`: Model health/status
+  - GET `/api/department-detect/test-samples`: Example classifications for sample texts
+
+- Where ML appears in the UI
+  - `templates/requests.html`
+    - ML Suggestion button uses POST `/api/ai/suggest-workflow` to build a suggested approval path
+  - `templates/admin_users.html`
+    - Exercises `/api/ml/predict`, `/api/ml/analyze-patterns`, `/api/ml/export-data`
+    - Checks `/api/department-detect/model-status` and `/api/department-detect/test-samples`
+  - `templates/analytics.html`
+    - Surfaces data returned by `/api/analytics/dashboard` (which incorporates ML-derived metrics)
+
+Notes
+- Models are loaded and served by the Flask backend (`app.py`), with scalers/encoders applied consistently on both train and predict paths.
+- Endpoints return `{ "success": true, ... }` payloads and include numeric predictions, feature weights, and suggested steps where applicable.
+
 ## Response shape notes
 - Most endpoints respond with `{ "success": true, ... }` or `{ "error": "message" }`.
 - Request entities include fields like `id`, `title`, `message`, `department`, `priority`, `status`, `created_at`, and arrays like `approvals` and `workflow_steps`.
