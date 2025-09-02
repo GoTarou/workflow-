@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Document Workflow System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 4px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-approved { background-color: #d4edda; color: #155724; }
+        .status-rejected { background-color: #f8d7da; color: #721c24; }
+        .status-archived { background-color: #e2e3e5; color: #383d41; }
+        .priority-urgent { background-color: #f8d7da; color: #721c24; }
+        .priority-high { background-color: #fff3cd; color: #856404; }
+        .priority-normal { background-color: #d1ecf1; color: #0c5460; }
+        .priority-low { background-color: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            {% if current_user.is_authenticated %}
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar p-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-file-alt me-2"></i>
+                            Workflow
+                        </h4>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="text-white-50 small">Welcome,</div>
+                        <div class="text-white fw-bold">{{ current_user.username }}</div>
+                        <div class="text-white-50 small">{{ current_user.role|title }}</div>
+                    </div>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link {% if request.endpoint == 'new_document' %}active{% endif %}" href="{{ url_for('new_document') }}">
+                            <i class="fas fa-plus me-2"></i> New Document
+                        </a>
+                        <a class="nav-link {% if request.endpoint == 'requests_page' %}active{% endif %}" href="{{ url_for('requests_page') }}">
+                            <i class="fas fa-clipboard-list me-2"></i> My Requests
+                        </a>
+                        {% if current_user.role in ['admin', 'approver'] %}
+                        <a class="nav-link {% if request.endpoint == 'approvals_page' %}active{% endif %}" href="{{ url_for('approvals_page') }}">
+                            <i class="fas fa-check-double me-2"></i> Approvals
+                        </a>
+                        {% endif %}
+                        {% if current_user.role == 'admin' %}
+                        <a class="nav-link {% if request.endpoint == 'analytics_dashboard' %}active{% endif %}" href="{{ url_for('analytics_dashboard') }}">
+                            <i class="fas fa-chart-line me-2"></i> Analytics
+                        </a>
+                        {% endif %}
+                        {% if current_user.role == 'admin' %}
+                        <a class="nav-link {% if request.endpoint == 'admin_users' %}active{% endif %}" href="{{ url_for('admin_users') }}">
+                            <i class="fas fa-users me-2"></i> Manage Users
+                        </a>
+                        <a class="nav-link {% if request.endpoint == 'manage_approvers' %}active{% endif %}" href="{{ url_for('manage_approvers') }}">
+                            <i class="fas fa-users-cog me-2"></i> Manage Approvers
+                        </a>
+                        {% endif %}
+                        <hr class="text-white-50">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 px-0">
+                <div class="main-content p-4">
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,1497 @@
+{% extends "base.html" %}
+
+{% block title %}Requests - Document Workflow System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>My Requests
+        </h1>
+        <p class="text-muted mb-0">View and manage your submitted requests</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRequestModal">
+            <i class="fas fa-plus me-2"></i>New Request
+        </button>
+    </div>
+</div>
+
+<!-- Request Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="pendingCount">0</h4>
+                        <small>Pending</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="approvedCount">0</h4>
+                        <small>Approved</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="departmentApprovedCount">0</h4>
+                        <small>Dept. Approved</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-user-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="rejectedCount">0</h4>
+                        <small>Rejected</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Request History
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="requestsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsTableBody">
+                    <!-- Requests will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Workflow Steps Display Section -->
+        <div id="workflowStepsDisplay" class="mt-4" style="display: none;">
+            <h6><i class="fas fa-project-diagram me-2"></i>Workflow Steps</h6>
+            <div id="workflowStepsContent" class="border rounded p-3 bg-light">
+                <!-- Workflow steps will be displayed here -->
+            </div>
+        </div>
+            </table>
+        </div>
+        <div id="noRequestsMessage" class="text-center py-4" style="display: none;">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No requests found</h5>
+            <p class="text-muted">You haven't submitted any requests yet.</p>
+        </div>
+    </div>
+</div>
+
+<!-- New Request Modal -->
+<div class="modal fade" id="newRequestModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-robot me-2"></i>Submit New Request
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Request Type Selection -->
+                <div class="mb-4">
+                    <div class="btn-group w-100" role="group" aria-label="Request Type Selection">
+                        <input type="radio" class="btn-check" name="requestType" id="aiRouting" value="ai" checked>
+                        <label class="btn btn-outline-primary" for="aiRouting">
+                            <i class="fas fa-robot me-2"></i>AI-Powered Routing
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="requestType" id="workflowDesign" value="workflow">
+                        <label class="btn btn-outline-primary" for="workflowDesign">
+                            <i class="fas fa-project-diagram me-2"></i>Manual Workflow Design
+                        </label>
+                    </div>
+                </div>
+
+                <!-- AI-Powered Routing Section -->
+                <div id="aiRoutingSection">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>AI-Powered Routing:</strong> Simply describe your request and our AI will automatically determine the department, priority, and route it to the right approver.
+                    </div>
+                    
+                    <form id="newRequestForm">
+                        <div class="mb-3">
+                            <label for="requestMessage" class="form-label">Describe Your Request *</label>
+                            <textarea class="form-control" id="requestMessage" rows="6" required
+                                      placeholder="Please describe your request in detail. For example:&#10;&#10;• 'I need vacation time next week for a family trip'&#10;• 'My computer won't turn on and I can't access my files'&#10;• 'The air conditioning in the office is broken'&#10;• 'Customer ABC Corp wants to place a large order'&#10;&#10;The AI will automatically detect the department and route your request to the appropriate approver."></textarea>
+                        </div>
+                        
+                        <!-- AI Analysis Results (hidden initially) -->
+                        <div id="aiAnalysisResults" class="d-none">
+                            <div class="alert alert-success">
+                                <h6><i class="fas fa-robot me-2"></i>AI Analysis Results:</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Department:</strong> <span id="aiDepartment" class="badge bg-info"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Priority:</strong> <span id="aiPriority" class="badge bg-warning"></span>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <strong>Details:</strong> <span id="aiDetails"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Manual Workflow Design Section -->
+                <div id="workflowDesignSection" class="d-none">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Manual Workflow Design:</strong> Design your own approval workflow by dragging departments and steps to create a custom approval path.
+                    </div>
+                    
+                    <form id="workflowForm">
+                        <div class="mb-3">
+                            <label for="workflowTitle" class="form-label">Request Title *</label>
+                            <input type="text" class="form-control" id="workflowTitle" required placeholder="Enter a descriptive title for your request">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="workflowDescription" class="form-label">Request Description *</label>
+                            <textarea class="form-control" id="workflowDescription" rows="4" required placeholder="Describe your request in detail"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="workflowPriority" class="form-label">Priority Level</label>
+                            <select class="form-select" id="workflowPriority">
+                                <option value="low">Low</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </form>
+
+                    <!-- Workflow Designer -->
+                    <div class="workflow-designer-container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">
+                                <i class="fas fa-project-diagram me-2"></i>Design Your Approval Workflow
+                            </h6>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary me-2" id="suggestMLWorkflow">
+                                    <i class="fas fa-brain me-1"></i>ML Suggestion
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="addWorkflowStep">
+                                    <i class="fas fa-plus me-1"></i>Add Step
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Department Palette -->
+                        <div class="department-palette mb-3">
+                            <h6 class="text-muted mb-2">Available Departments:</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="department-item" data-department="HR" draggable="true">
+                                    <i class="fas fa-users me-1"></i>HR
+                                </div>
+                                <div class="department-item" data-department="IT" draggable="true">
+                                    <i class="fas fa-laptop me-1"></i>IT
+                                </div>
+                                <div class="department-item" data-department="Finance" draggable="true">
+                                    <i class="fas fa-dollar-sign me-1"></i>Finance
+                                </div>
+                                <div class="department-item" data-department="Sales" draggable="true">
+                                    <i class="fas fa-chart-line me-1"></i>Sales
+                                </div>
+                                <div class="department-item" data-department="Facilities" draggable="true">
+                                    <i class="fas fa-building me-1"></i>Facilities
+                                </div>
+                                <div class="department-item" data-department="Legal" draggable="true">
+                                    <i class="fas fa-gavel me-1"></i>Legal
+                                </div>
+                                <div class="department-item" data-department="Operations" draggable="true">
+                                    <i class="fas fa-cogs me-1"></i>Operations
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Workflow Canvas -->
+                        <div class="workflow-canvas" id="workflowCanvas">
+                            <div class="workflow-start">
+                                <div class="workflow-step start-step">
+                                    <i class="fas fa-play-circle"></i>
+                                    <span>Start</span>
+                                </div>
+                            </div>
+                            <div class="workflow-steps" id="workflowSteps">
+                                <!-- Workflow steps will be added here -->
+                            </div>
+                            <div class="workflow-end">
+                                <div class="workflow-step end-step">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Complete</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Instructions:</strong> Drag departments from the palette above to the workflow canvas. You can reorder steps by dragging them up or down. Each step represents an approval level in your workflow.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitRequestBtn">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request Details Modal -->
+<div class="modal fade" id="requestDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>Request Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="requestDetailsContent">
+                <!-- Request details will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    Are you sure you want to delete this request? 
+                    <strong id="deleteRequestTitle"></strong>
+                </p>
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All approval history and related data will be permanently removed.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Delete Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load requests on page load
+    loadRequests();
+    
+    // Submit new request
+    document.getElementById('submitRequestBtn').addEventListener('click', function() {
+        submitNewRequest();
+    });
+    
+    // Initialize workflow designer
+    initializeWorkflowDesigner();
+    
+    // Add event listeners for request type selection
+    document.getElementById('aiRouting').addEventListener('change', function() {
+        toggleRequestType('ai');
+    });
+    
+    document.getElementById('workflowDesign').addEventListener('change', function() {
+        toggleRequestType('workflow');
+    });
+});
+
+async function loadRequests() {
+    try {
+        const response = await fetch('/api/requests');
+        const result = await response.json();
+        
+        if (result.success) {
+            // Also get user role information
+            const userResponse = await fetch('/api/user-info');
+            const userResult = await userResponse.json();
+            const isAdmin = userResult.success && userResult.user.role === 'admin';
+            
+            displayRequests(result.requests, isAdmin);
+            updateStatistics(result.requests);
+        } else {
+            showError('Failed to load requests: ' + result.error);
+        }
+    } catch (error) {
+        showError('Failed to load requests: ' + error.message);
+    }
+}
+
+function displayRequests(requests, isAdmin = false) {
+    const tableBody = document.getElementById('requestsTableBody');
+    const noRequestsMessage = document.getElementById('noRequestsMessage');
+    
+    if (requests.length === 0) {
+        tableBody.innerHTML = '';
+        noRequestsMessage.style.display = 'block';
+        return;
+    }
+    
+    noRequestsMessage.style.display = 'none';
+    
+    tableBody.innerHTML = requests.map(request => `
+        <tr>
+            <td><span class="badge bg-secondary">#${request.id}</span></td>
+            <td>
+                <strong>${request.title}</strong>
+                <br><small class="text-muted">${request.message.substring(0, 100)}${request.message.length > 100 ? '...' : ''}</small>
+            </td>
+            <td>
+                <span class="badge bg-info">${request.department}</span>
+            </td>
+            <td>${getStatusBadge(request.status)}</td>
+            <td>${getPriorityBadge(request.priority)}</td>
+            <td>
+                <small class="text-muted">
+                    ${new Date(request.created_at).toLocaleDateString()}
+                </small>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewRequestDetails(${request.id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info ms-1" onclick="showWorkflowSteps(${request.id}, ${JSON.stringify(request.workflow_steps).replace(/"/g, '&quot;')})">
+                    <i class="fas fa-project-diagram"></i>
+                </button>
+                ${isAdmin ? `
+                <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDeleteRequest(${request.id}, '${request.title.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getStatusBadge(status) {
+    const statusConfig = {
+        'pending': 'bg-warning',
+        'department_approved': 'bg-info',
+        'admin_approved': 'bg-success',
+        'rejected': 'bg-danger',
+        'completed': 'bg-secondary'
+    };
+    
+    return `<span class="badge ${statusConfig[status] || 'bg-secondary'}">${status.replace('_', ' ').toUpperCase()}</span>`;
+}
+
+function getPriorityBadge(priority) {
+    const priorityConfig = {
+        'low': 'bg-secondary',
+        'normal': 'bg-info',
+        'high': 'bg-warning',
+        'urgent': 'bg-danger'
+    };
+    
+    return `<span class="badge ${priorityConfig[priority] || 'bg-secondary'}">${priority.toUpperCase()}</span>`;
+}
+
+function updateStatistics(requests) {
+    const stats = {
+        pending: 0,
+        approved: 0,
+        departmentApproved: 0,
+        rejected: 0
+    };
+    
+    requests.forEach(request => {
+        switch (request.status) {
+            case 'pending':
+                stats.pending++;
+                break;
+            case 'admin_approved':
+                stats.approved++;
+                break;
+            case 'department_approved':
+                stats.departmentApproved++;
+                break;
+            case 'rejected':
+                stats.rejected++;
+                break;
+        }
+    });
+    
+    document.getElementById('pendingCount').textContent = stats.pending;
+    document.getElementById('approvedCount').textContent = stats.approved;
+    document.getElementById('departmentApprovedCount').textContent = stats.departmentApproved;
+    document.getElementById('rejectedCount').textContent = stats.rejected;
+}
+
+function displayWorkflowSteps(workflowSteps) {
+    const workflowDisplay = document.getElementById('workflowStepsDisplay');
+    const workflowContent = document.getElementById('workflowStepsContent');
+    
+    if (!workflowSteps || workflowSteps.length === 0) {
+        workflowDisplay.style.display = 'none';
+        return;
+    }
+    
+    workflowDisplay.style.display = 'block';
+    
+    const stepsHtml = workflowSteps.map((step, index) => {
+        const statusClass = step.status === 'pending' ? 'bg-warning' : 
+                           step.status === 'approve' ? 'bg-success' : 'bg-secondary';
+        const statusText = step.status === 'pending' ? 'Pending' : 
+                          step.status === 'approve' ? 'Approved' : step.status;
+        
+        return `
+            <div class="d-flex align-items-center mb-2">
+                <div class="me-3">
+                    <span class="badge bg-primary rounded-circle">${step.step}</span>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-bold">${step.department}</div>
+                    <small class="text-muted">Approver: ${step.approver}</small>
+                </div>
+                <div class="ms-3">
+                    <span class="badge ${statusClass}">${statusText}</span>
+                </div>
+            </div>
+            ${index < workflowSteps.length - 1 ? '<div class="text-center mb-2"><i class="fas fa-arrow-down text-muted"></i></div>' : ''}
+        `;
+    }).join('');
+    
+    workflowContent.innerHTML = stepsHtml;
+}
+
+function showWorkflowSteps(requestId, workflowSteps) {
+    // Hide any existing workflow display
+    document.getElementById('workflowStepsDisplay').style.display = 'none';
+    
+    // Display the workflow steps for this specific request
+    displayWorkflowSteps(workflowSteps);
+    
+    // Scroll to the workflow steps section
+    document.getElementById('workflowStepsDisplay').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function submitNewRequest() {
+    const message = document.getElementById('requestMessage').value.trim();
+    
+    if (!message) {
+        showError('Please describe your request.');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submitRequestBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    // Prevent multiple submissions
+    if (submitBtn.disabled) {
+        return;
+    }
+    
+    // Check if AI analysis has already been done
+    if (submitBtn.innerHTML.includes('Confirm & Submit')) {
+        return; // Already analyzed, don't run again
+    }
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>AI Analyzing...';
+        
+        const response = await fetch('/api/ai/route-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show AI analysis results
+            document.getElementById('aiDepartment').textContent = result.routing_results.department;
+            document.getElementById('aiPriority').textContent = result.routing_results.priority || 'Normal';
+            document.getElementById('aiDetails').textContent = result.routing_results.details;
+            document.getElementById('aiAnalysisResults').classList.remove('d-none');
+            
+            // Update button text and action
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Confirm & Submit';
+            submitBtn.onclick = () => finalizeRequest();
+            
+        } else {
+            showError('Failed to analyze request: ' + result.error);
+            submitBtn.innerHTML = originalText;
+        }
+    } catch (error) {
+        showError('Failed to analyze request: ' + error.message);
+        submitBtn.innerHTML = originalText;
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function finalizeRequest() {
+    const submitBtn = document.getElementById('submitRequestBtn');
+    const originalText = submitBtn.innerHTML;
+    const message = document.getElementById('requestMessage').value.trim();
+    
+    // Get the AI analysis results
+    const department = document.getElementById('aiDepartment').textContent;
+    const priority = document.getElementById('aiPriority').textContent.toLowerCase();
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+        
+        // Create the actual request
+        const response = await fetch('/api/requests/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                department: department,
+                priority: priority
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('Request submitted successfully! It has been routed to the appropriate department.');
+            
+            // Close modal and reset form completely
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newRequestModal'));
+            modal.hide();
+            
+            // Call the reset function to ensure everything is cleared
+            resetNewRequestModal();
+            
+            // Reload requests
+            loadRequests();
+        } else {
+            showError('Failed to submit request: ' + result.error);
+            submitBtn.innerHTML = originalText;
+        }
+        
+    } catch (error) {
+        showError('Failed to submit request: ' + error.message);
+        submitBtn.innerHTML = originalText;
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function viewRequestDetails(requestId) {
+    try {
+        const response = await fetch(`/api/requests/${requestId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayRequestDetails(result.request);
+            const modal = new bootstrap.Modal(document.getElementById('requestDetailsModal'));
+            modal.show();
+        } else {
+            showError('Failed to load request details: ' + result.error);
+        }
+    } catch (error) {
+        showError('Failed to load request details: ' + error.message);
+    }
+}
+
+function displayRequestDetails(request) {
+    const content = document.getElementById('requestDetailsContent');
+    
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-8">
+                <h6>Request Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Title:</strong></td><td>${request.title}</td></tr>
+                    <tr><td><strong>Department:</strong></td><td>${getStatusBadge(request.department)}</td></tr>
+                    <tr><td><strong>Status:</strong></td><td>${getStatusBadge(request.status)}</td></tr>
+                    <tr><td><strong>Priority:</strong></td><td>${getPriorityBadge(request.priority)}</td></tr>
+                    <tr><td><strong>Submitted:</strong></td><td>${new Date(request.created_at).toLocaleString()}</td></tr>
+                </table>
+                
+                <h6 class="mt-3">Request Message</h6>
+                <div class="border rounded p-3 bg-light">
+                    ${request.message}
+                </div>
+                
+                <h6 class="mt-3">Workflow Steps</h6>
+                <div class="border rounded p-3 bg-light">
+                    ${request.workflow_steps ? request.workflow_steps.map((step, index) => `
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-circle">${step.step}</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">${step.department}</div>
+                                <small class="text-muted">Approver: ${step.approver}</small>
+                            </div>
+                            <div class="ms-3">
+                                <span class="badge ${step.status === 'pending' ? 'bg-warning' : 'bg-success'}">${step.status}</span>
+                            </div>
+                        </div>
+                        ${index < request.workflow_steps.length - 1 ? '<div class="text-center mb-2"><i class="fas fa-arrow-down text-muted"></i></div>' : ''}
+                    `).join('') : '<p class="text-muted">No workflow steps available</p>'}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6>Approval History</h6>
+                <div class="timeline">
+                    ${request.approvals.map(approval => `
+                        <div class="timeline-item">
+                            <div class="timeline-marker ${approval.action === 'approve' ? 'bg-success' : approval.action === 'reject' ? 'bg-danger' : 'bg-secondary'}"></div>
+                            <div class="timeline-content">
+                                <small class="text-muted">${new Date(approval.created_at).toLocaleString()}</small>
+                                <p class="mb-1"><strong>${approval.approver}</strong> ${approval.action}ed</p>
+                                ${approval.comments ? `<small class="text-muted">${approval.comments}</small>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function showSuccess(message) {
+    // You can implement a toast notification system here
+    alert('Success: ' + message);
+}
+
+function showError(message) {
+    // You can implement a toast notification system here
+    alert('Error: ' + message);
+}
+
+// Function to reset the new request modal completely
+function resetNewRequestModal() {
+    // Reset the form
+    document.getElementById('newRequestForm').reset();
+    
+    // Hide AI analysis results
+    document.getElementById('aiAnalysisResults').classList.add('d-none');
+    
+    // Reset workflow form
+    resetWorkflowForm();
+    
+    // Reset button to initial state
+    const submitBtn = document.getElementById('submitRequestBtn');
+    submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Request';
+    submitBtn.onclick = submitNewRequest;
+    submitBtn.disabled = false;
+    
+    // Remove any existing click handlers to prevent duplicates
+    submitBtn.removeEventListener('click', submitNewRequest);
+    submitBtn.addEventListener('click', submitNewRequest);
+    
+    // Reset to AI routing by default
+    document.getElementById('aiRouting').checked = true;
+    toggleRequestType('ai');
+}
+
+// Add event listener to reset modal when it's shown
+document.addEventListener('DOMContentLoaded', function() {
+    const newRequestModal = document.getElementById('newRequestModal');
+    if (newRequestModal) {
+        newRequestModal.addEventListener('show.bs.modal', function() {
+            resetNewRequestModal();
+        });
+    }
+    
+    // Add event listener for delete confirmation modal
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            const requestId = this.getAttribute('data-request-id');
+            if (requestId) {
+                deleteRequest(requestId);
+            }
+        });
+    }
+});
+
+// Function to show delete confirmation modal
+function confirmDeleteRequest(requestId, requestTitle) {
+    // Set the request title in the modal
+    document.getElementById('deleteRequestTitle').textContent = requestTitle;
+    
+    // Set the request ID on the confirm button
+    document.getElementById('confirmDeleteBtn').setAttribute('data-request-id', requestId);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+}
+
+// Function to delete the request
+async function deleteRequest(requestId) {
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    const originalText = confirmBtn.innerHTML;
+    
+    try {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+        
+        const response = await fetch(`/api/requests/${requestId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('Request deleted successfully!');
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+            modal.hide();
+            
+            // Reload the requests
+            loadRequests();
+        } else {
+            showError('Failed to delete request: ' + result.error);
+        }
+        
+    } catch (error) {
+        showError('Failed to delete request: ' + error.message);
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalText;
+    }
+}
+
+// Workflow Designer Functions
+function initializeWorkflowDesigner() {
+    const workflowSteps = document.getElementById('workflowSteps');
+    const addStepBtn = document.getElementById('addWorkflowStep');
+    
+    // Initialize drag and drop for department items
+    initializeDragAndDrop();
+    
+    // Add step button functionality
+    addStepBtn.addEventListener('click', function() {
+        addEmptyWorkflowStep();
+    });
+    
+    // Add ML workflow suggestion functionality
+    const suggestMLBtn = document.getElementById('suggestMLWorkflow');
+    if (suggestMLBtn) {
+        suggestMLBtn.addEventListener('click', function() {
+            suggestMLWorkflow();
+        });
+    }
+}
+
+function toggleRequestType(type) {
+    const aiSection = document.getElementById('aiRoutingSection');
+    const workflowSection = document.getElementById('workflowDesignSection');
+    const submitBtn = document.getElementById('submitRequestBtn');
+    
+    if (type === 'ai') {
+        aiSection.classList.remove('d-none');
+        workflowSection.classList.add('d-none');
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Request';
+        submitBtn.onclick = submitNewRequest;
+    } else {
+        aiSection.classList.add('d-none');
+        workflowSection.classList.remove('d-none');
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Workflow Request';
+        submitBtn.onclick = submitWorkflowRequest;
+    }
+}
+
+function initializeDragAndDrop() {
+    const departmentItems = document.querySelectorAll('.department-item');
+    const workflowSteps = document.getElementById('workflowSteps');
+    
+    departmentItems.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+    });
+    
+    workflowSteps.addEventListener('dragover', handleDragOver);
+    workflowSteps.addEventListener('drop', handleDrop);
+    workflowSteps.addEventListener('dragenter', handleDragEnter);
+    workflowSteps.addEventListener('dragleave', handleDragLeave);
+}
+
+function handleDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.dataset.department);
+    e.target.classList.add('dragging');
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    e.target.closest('.workflow-steps').classList.add('drop-zone');
+}
+
+function handleDragLeave(e) {
+    if (!e.target.closest('.workflow-steps').contains(e.relatedTarget)) {
+        e.target.closest('.workflow-steps').classList.remove('drop-zone');
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const department = e.dataTransfer.getData('text/plain');
+    e.target.closest('.workflow-steps').classList.remove('drop-zone');
+    
+    addWorkflowStep(department);
+}
+
+function addWorkflowStep(department, role = null) {
+    const workflowSteps = document.getElementById('workflowSteps');
+    const stepCount = workflowSteps.children.length + 1;
+    
+    // Add arrow before the step (except for the first step)
+    if (stepCount > 1) {
+        const arrowElement = document.createElement('div');
+        arrowElement.className = 'workflow-arrow';
+        arrowElement.innerHTML = '<i class="fas fa-arrow-down"></i>';
+        workflowSteps.appendChild(arrowElement);
+    }
+    
+    const stepElement = document.createElement('div');
+    stepElement.className = 'workflow-step-item';
+    stepElement.draggable = true;
+    stepElement.dataset.department = department;
+    stepElement.dataset.stepNumber = stepCount;
+    stepElement.dataset.role = role || 'general';
+    
+    // Determine icon and styling based on role
+    let icon, bgColor, textColor;
+    
+    if (role === 'submitter') {
+        icon = 'fas fa-user';
+        bgColor = '#28a745'; // Green for user
+        textColor = 'white';
+    } else if (role === 'approver') {
+        icon = 'fas fa-user-check';
+        bgColor = '#17a2b8'; // Blue for approver
+        textColor = 'white';
+    } else if (role === 'department_approver') {
+        icon = 'fas fa-building';
+        bgColor = '#ffc107'; // Yellow for department
+        textColor = 'black';
+    } else if (role === 'admin') {
+        icon = 'fas fa-user-shield';
+        bgColor = '#dc3545'; // Red for admin
+        textColor = 'white';
+    } else {
+        // Default department icons
+        const departmentIcons = {
+            'HR': 'fas fa-users',
+            'IT': 'fas fa-laptop',
+            'Finance': 'fas fa-dollar-sign',
+            'Sales': 'fas fa-chart-line',
+            'Facilities': 'fas fa-building',
+            'Legal': 'fas fa-gavel',
+            'Operations': 'fas fa-cogs'
+        };
+        icon = departmentIcons[department] || 'fas fa-building';
+        bgColor = '#6c757d'; // Gray for general departments
+        textColor = 'white';
+    }
+    
+    stepElement.innerHTML = `
+        <div class="step-header" style="background-color: ${bgColor}; color: ${textColor};">
+            <span class="step-number">${stepCount}</span>
+            <i class="${icon} me-2"></i>
+            <span class="step-title">${department}</span>
+        </div>
+        <div class="step-info">
+            <small>${role ? role.replace('_', ' ').toUpperCase() : 'Approval Step'} ${stepCount}</small>
+            <div class="step-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveStepUp(this)" title="Move Up">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveStepDown(this)" title="Move Down">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWorkflowStep(this)" title="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    workflowSteps.appendChild(stepElement);
+    updateStepNumbers();
+}
+
+function addEmptyWorkflowStep() {
+    // Show a dropdown to select department
+    const department = prompt('Enter department name (HR, IT, Finance, Sales, Facilities, Legal, Operations):');
+    if (department && ['HR', 'IT', 'Finance', 'Sales', 'Facilities', 'Legal', 'Operations'].includes(department)) {
+        addWorkflowStep(department);
+    }
+}
+
+function removeWorkflowStep(button) {
+    const stepElement = button.closest('.workflow-step-item');
+    const nextElement = stepElement.nextElementSibling;
+    
+    // Remove the step
+    stepElement.remove();
+    
+    // Remove the arrow after this step if it exists
+    if (nextElement && nextElement.classList.contains('workflow-arrow')) {
+        nextElement.remove();
+    }
+    
+    updateStepNumbers();
+}
+
+function moveStepUp(button) {
+    const stepElement = button.closest('.workflow-step-item');
+    const prevElement = stepElement.previousElementSibling;
+    
+    if (prevElement && prevElement.classList.contains('workflow-step-item')) {
+        // Move the step up
+        stepElement.parentNode.insertBefore(stepElement, prevElement);
+        
+        // Also move the arrow if it exists
+        const nextElement = stepElement.nextElementSibling;
+        if (nextElement && nextElement.classList.contains('workflow-arrow')) {
+            stepElement.parentNode.insertBefore(nextElement, stepElement);
+        }
+        
+        updateStepNumbers();
+    }
+}
+
+function moveStepDown(button) {
+    const stepElement = button.closest('.workflow-step-item');
+    const nextElement = stepElement.nextElementSibling;
+    
+    if (nextElement && nextElement.classList.contains('workflow-step-item')) {
+        // Move the step down
+        stepElement.parentNode.insertBefore(nextElement, stepElement);
+        
+        // Also move the arrow if it exists
+        const arrowAfterNext = nextElement.nextElementSibling;
+        if (arrowAfterNext && arrowAfterNext.classList.contains('workflow-arrow')) {
+            stepElement.parentNode.insertBefore(arrowAfterNext, stepElement);
+        }
+        
+        updateStepNumbers();
+    }
+}
+
+function handleStepDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.dataset.stepNumber);
+    e.target.classList.add('dragging');
+}
+
+function handleStepDragOver(e) {
+    e.preventDefault();
+}
+
+function handleStepDrop(e) {
+    e.preventDefault();
+    const draggedStepNumber = e.dataTransfer.getData('text/plain');
+    const draggedStep = document.querySelector(`[data-step-number="${draggedStepNumber}"]`);
+    const targetStep = e.target.closest('.workflow-step-item');
+    
+    if (draggedStep && targetStep && draggedStep !== targetStep) {
+        const allSteps = Array.from(document.querySelectorAll('.workflow-step-item'));
+        const draggedIndex = allSteps.indexOf(draggedStep);
+        const targetIndex = allSteps.indexOf(targetStep);
+        
+        if (draggedIndex < targetIndex) {
+            targetStep.parentNode.insertBefore(draggedStep, targetStep.nextSibling);
+        } else {
+            targetStep.parentNode.insertBefore(draggedStep, targetStep);
+        }
+        
+        updateStepNumbers();
+    }
+    
+    document.querySelectorAll('.workflow-step-item').forEach(step => {
+        step.classList.remove('dragging');
+    });
+}
+
+function updateStepNumbers() {
+    const steps = document.querySelectorAll('.workflow-step-item');
+    steps.forEach((step, index) => {
+        step.dataset.stepNumber = index + 1;
+        step.querySelector('.step-number').textContent = index + 1;
+        step.querySelector('.step-info small').textContent = `Approval Step ${index + 1}`;
+    });
+    
+    // Update arrows to maintain visual flow
+    const workflowSteps = document.getElementById('workflowSteps');
+    const arrows = workflowSteps.querySelectorAll('.workflow-arrow');
+    
+    // Remove all existing arrows
+    arrows.forEach(arrow => arrow.remove());
+    
+    // Add arrows back between steps
+    const stepElements = workflowSteps.querySelectorAll('.workflow-step-item');
+    stepElements.forEach((step, index) => {
+        if (index > 0) { // Don't add arrow before first step
+            const arrowElement = document.createElement('div');
+            arrowElement.className = 'workflow-arrow';
+            arrowElement.innerHTML = '<i class="fas fa-arrow-down"></i>';
+            workflowSteps.insertBefore(arrowElement, step);
+        }
+    });
+}
+
+async function submitWorkflowRequest() {
+    const title = document.getElementById('workflowTitle').value.trim();
+    const description = document.getElementById('workflowDescription').value.trim();
+    const priority = document.getElementById('workflowPriority').value;
+    const workflowSteps = document.querySelectorAll('.workflow-step-item');
+    
+    if (!title || !description) {
+        showError('Please fill in all required fields');
+        return;
+    }
+    
+    if (workflowSteps.length === 0) {
+        showError('Please add at least one approval step to your workflow');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submitRequestBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Workflow...';
+        
+        // Extract workflow steps
+        const steps = Array.from(workflowSteps).map(step => ({
+            department: step.dataset.department,
+            stepNumber: parseInt(step.dataset.stepNumber)
+        }));
+        
+        // Create the workflow request
+        const response = await fetch('/api/requests/create-workflow', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title,
+                message: description,
+                priority: priority,
+                workflow_steps: steps
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('Workflow request created successfully!');
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newRequestModal'));
+            modal.hide();
+            
+            // Reload requests
+            loadRequests();
+            
+            // Reset the form
+            resetWorkflowForm();
+        } else {
+            showError('Failed to create workflow request: ' + result.error);
+        }
+        
+    } catch (error) {
+        showError('Failed to create workflow request: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+function resetWorkflowForm() {
+    document.getElementById('workflowTitle').value = '';
+    document.getElementById('workflowDescription').value = '';
+    document.getElementById('workflowPriority').value = 'normal';
+    
+    // Clear workflow steps and arrows
+    const workflowSteps = document.getElementById('workflowSteps');
+    workflowSteps.innerHTML = '';
+    
+    // Reset to AI routing
+    document.getElementById('aiRouting').checked = true;
+    toggleRequestType('ai');
+}
+
+async function suggestMLWorkflow() {
+    const message = document.getElementById('workflowDescription').value.trim();
+    if (!message) {
+        showError('Please describe your request to get an ML suggestion.');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitRequestBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Suggesting ML Workflow...';
+
+    try {
+        const response = await fetch('/api/ai/suggest-workflow', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const workflowSteps = document.getElementById('workflowSteps');
+            workflowSteps.innerHTML = ''; // Clear existing steps
+
+            result.workflow_steps.forEach((step, index) => {
+                addWorkflowStep(step.department, step.role);
+            });
+
+            showSuccess('ML workflow suggestion generated!');
+            // No need to call updateStepNumbers here, it's called by addWorkflowStep
+        } else {
+            showError('Failed to get ML workflow suggestion: ' + result.error);
+        }
+    } catch (error) {
+        showError('Failed to get ML workflow suggestion: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #007bff;
+}
+
+/* Workflow Designer Styles */
+.workflow-designer-container {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #f8f9fa;
+}
+
+.department-palette {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.department-item {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #e9ecef;
+    border: 2px solid #dee2e6;
+    border-radius: 20px;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 2px;
+}
+
+.department-item:hover {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.department-item:active {
+    cursor: grabbing;
+    transform: translateY(0);
+}
+
+.workflow-canvas {
+    background-color: white;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 300px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.workflow-canvas:hover {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.workflow-start, .workflow-end {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.workflow-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 25px;
+    font-weight: 500;
+    position: relative;
+}
+
+.start-step {
+    background-color: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.end-step {
+    background-color: #d1ecf1;
+    border-color: #17a2b8;
+    color: #0c5460;
+}
+
+.workflow-steps {
+    min-height: 200px;
+    padding: 20px 0;
+    position: relative;
+}
+
+.workflow-step-item {
+    background-color: white;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.workflow-step-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.workflow-step-item .step-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.workflow-step-item .step-number {
+    background-color: rgba(255,255,255,0.3);
+    color: inherit;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.workflow-step-item .step-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.workflow-step-item .step-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.workflow-step-item .step-info small {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.workflow-step-item .step-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.workflow-step-item .step-actions .btn {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.workflow-arrow {
+    text-align: center;
+    color: #6c757d;
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+.workflow-arrow i {
+    background-color: #f8f9fa;
+    border-radius: 50%;
+    padding: 8px;
+    border: 2px solid #dee2e6;
+}
+
+.drop-zone {
+    border: 2px dashed #007bff;
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.drop-zone.drag-over {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-color: #0056b3;
+}
+
+.workflow-arrow {
+    text-align: center;
+    color: #6c757d;
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+.workflow-arrow i {
+    background-color: #f8f9fa;
+    border-radius: 50%;
+    padding: 8px;
+    border: 2px solid #dee2e6;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-5px);
+    }
+    60% {
+        transform: translateY(-3px);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .workflow-designer-container {
+        padding: 15px;
+    }
+    
+    .department-item {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+    
+    .workflow-canvas {
+        padding: 15px;
+        min-height: 250px;
+    }
+}
+</style>
+{% endblock %}

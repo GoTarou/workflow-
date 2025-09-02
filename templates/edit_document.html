@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Document - Document Workflow System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Edit Document</h1>
+        <p class="text-muted mb-0">{{ document.title }}</p>
+    </div>
+    <a href="{{ url_for('view_document', doc_id=document.id) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Document
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Edit Document Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Document Title</label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ document.title }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category</label>
+                                <select class="form-select" id="category" name="category">
+                                    <option value="">Select Category</option>
+                                    <option value="Finance" {% if document.category == 'Finance' %}selected{% endif %}>Finance</option>
+                                    <option value="HR" {% if document.category == 'HR' %}selected{% endif %}>HR</option>
+                                    <option value="IT" {% if document.category == 'IT' %}selected{% endif %}>IT</option>
+                                    <option value="Operations" {% if document.category == 'Operations' %}selected{% endif %}>Operations</option>
+                                    <option value="Sales" {% if document.category == 'Sales' %}selected{% endif %}>Sales</option>
+                                    <option value="Marketing" {% if document.category == 'Marketing' %}selected{% endif %}>Marketing</option>
+                                    <option value="Legal" {% if document.category == 'Legal' %}selected{% endif %}>Legal</option>
+                                    <option value="Other" {% if document.category == 'Other' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    <option value="low" {% if document.priority == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="normal" {% if document.priority == 'normal' %}selected{% endif %}>Normal</option>
+                                    <option value="high" {% if document.priority == 'high' %}selected{% endif %}>High</option>
+                                    <option value="urgent" {% if document.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Current Status</label>
+                                <input type="text" class="form-control" id="status" value="{{ document.status|title }}" readonly>
+                                <small class="text-muted">Status can only be changed through the approval process</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Enter document description">{{ document.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                        <a href="{{ url_for('view_document', doc_id=document.id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Document Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Document Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Submitted by:</strong> {{ document.submitter.username }}</p>
+                        <p><strong>Department:</strong> {{ document.submitter.department or 'N/A' }}</p>
+                        <p><strong>Created:</strong> {{ document.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Document ID:</strong> {{ document.id }}</p>
+                        <p><strong>Last updated:</strong> {{ document.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        {% if document.filename %}
+                        <p><strong>Attached File:</strong> {{ document.filename }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Editing Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        You can modify the document title, description, category, and priority
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        Document status is managed through the approval workflow
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Changes will be logged and visible to all users
+                    </li>
+                    <li>
+                        <i class="fas fa-clock text-secondary me-2"></i>
+                        The "Last updated" timestamp will be automatically updated
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Changes
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Last modified: {{ document.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

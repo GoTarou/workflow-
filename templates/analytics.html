@@ -1,0 +1,602 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard - Document Workflow System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
+        </h1>
+        <p class="text-muted mb-0">Comprehensive insights into workflow performance and trends</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="exportAnalytics()">
+            <i class="fas fa-download me-2"></i>Export Report
+        </button>
+        <button class="btn btn-primary" onclick="refreshAnalytics()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+        </button>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <label class="form-label">Date Range</label>
+                <select class="form-select" id="dateRange">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30" selected>Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="365">Last Year</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-6" id="customDateRange" style="display: none;">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="fromDate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="toDate">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100" onclick="applyDateFilter()">
+                    <i class="fas fa-filter me-2"></i>Apply Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Performance Indicators -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="totalRequests">0</h4>
+                        <small>Total Requests</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="avgApprovalTime">0</h4>
+                        <small>Avg. Approval Time (hrs)</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="approvalRate">0%</h4>
+                        <small>Approval Rate</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="pendingRequests">0</h4>
+                        <small>Pending Requests</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-hourglass-half fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1: Request Volume Trends & Department Performance -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Request Volume Trends
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="requestVolumeChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Department Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="departmentChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2: Approval Time Metrics & User Activity -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Approval Time by Department
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="approvalTimeChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Top Request Submitters
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="userActivityChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottleneck Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Bottleneck Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Slowest Approval Steps</h6>
+                        <div id="bottleneckList">
+                            <!-- Bottleneck items will be populated here -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Department Performance Ranking</h6>
+                        <div id="departmentRanking">
+                            <!-- Department ranking will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Metrics Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-table me-2"></i>Detailed Performance Metrics
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="metricsTable">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Total Requests</th>
+                        <th>Avg. Approval Time</th>
+                        <th>Approval Rate</th>
+                        <th>Pending Count</th>
+                        <th>Performance Score</th>
+                    </tr>
+                </thead>
+                <tbody id="metricsTableBody">
+                    <!-- Metrics data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="text-center py-5" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading analytics data...</p>
+</div>
+
+<!-- No Data Message -->
+<div id="noDataMessage" class="text-center py-5" style="display: none;">
+    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">No Data Available</h5>
+    <p class="text-muted">No requests found for the selected date range.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global variables for charts
+let requestVolumeChart, departmentChart, approvalTimeChart, userActivityChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date range picker
+    initializeDateRange();
+    
+    // Load initial analytics
+    loadAnalytics();
+    
+    // Set up event listeners
+    document.getElementById('dateRange').addEventListener('change', function() {
+        if (this.value === 'custom') {
+            document.getElementById('customDateRange').style.display = 'block';
+        } else {
+            document.getElementById('customDateRange').style.display = 'none';
+        }
+    });
+});
+
+function initializeDateRange() {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    document.getElementById('toDate').value = today.toISOString().split('T')[0];
+    document.getElementById('fromDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+}
+
+function applyDateFilter() {
+    loadAnalytics();
+}
+
+async function loadAnalytics() {
+    showLoading(true);
+    
+    try {
+        const dateRange = document.getElementById('dateRange').value;
+        let fromDate, toDate;
+        
+        if (dateRange === 'custom') {
+            fromDate = document.getElementById('fromDate').value;
+            toDate = document.getElementById('toDate').value;
+        } else {
+            const today = new Date();
+            const daysAgo = new Date(today.getTime() - (parseInt(dateRange) * 24 * 60 * 60 * 1000));
+            fromDate = daysAgo.toISOString().split('T')[0];
+            toDate = today.toISOString().split('T')[0];
+        }
+        
+        const response = await fetch(`/api/analytics/dashboard?from_date=${fromDate}&to_date=${toDate}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAnalytics(result.data);
+        } else {
+            showError('Failed to load analytics: ' + result.error);
+        }
+    } catch (error) {
+        showError('Failed to load analytics: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function displayAnalytics(data) {
+    // Update KPIs
+    document.getElementById('totalRequests').textContent = data.total_requests;
+    document.getElementById('avgApprovalTime').textContent = data.avg_approval_time_hours.toFixed(1);
+    document.getElementById('approvalRate').textContent = data.approval_rate.toFixed(1) + '%';
+    document.getElementById('pendingRequests').textContent = data.pending_requests;
+    
+    // Create/update charts
+    createRequestVolumeChart(data.request_volume_trends);
+    createDepartmentChart(data.department_distribution);
+    createApprovalTimeChart(data.approval_time_by_department);
+    createUserActivityChart(data.top_submitters);
+    
+    // Update bottleneck analysis
+    displayBottleneckAnalysis(data.bottleneck_analysis);
+    
+    // Update department ranking
+    displayDepartmentRanking(data.department_performance);
+    
+    // Update metrics table
+    displayMetricsTable(data.department_metrics);
+}
+
+function createRequestVolumeChart(data) {
+    const ctx = document.getElementById('requestVolumeChart').getContext('2d');
+    
+    if (requestVolumeChart) {
+        requestVolumeChart.destroy();
+    }
+    
+    requestVolumeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Requests',
+                data: data.values,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createDepartmentChart(data) {
+    const ctx = document.getElementById('departmentChart').getContext('2d');
+    
+    if (departmentChart) {
+        departmentChart.destroy();
+    }
+    
+    const colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+    ];
+    
+    departmentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: colors.slice(0, data.labels.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createApprovalTimeChart(data) {
+    const ctx = document.getElementById('approvalTimeChart').getContext('2d');
+    
+    if (approvalTimeChart) {
+        approvalTimeChart.destroy();
+    }
+    
+    approvalTimeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Average Hours',
+                data: data.values,
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgb(54, 162, 235)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hours'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(1) + 'h';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createUserActivityChart(data) {
+    const ctx = document.getElementById('userActivityChart').getContext('2d');
+    
+    if (userActivityChart) {
+        userActivityChart.destroy();
+    }
+    
+    userActivityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Requests Submitted',
+                data: data.values,
+                backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                borderColor: 'rgb(255, 159, 64)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Requests'
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Math.floor(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function displayBottleneckAnalysis(data) {
+    const container = document.getElementById('bottleneckList');
+    
+    if (data.length === 0) {
+        container.innerHTML = '<p class="text-muted">No bottlenecks identified</p>';
+        return;
+    }
+    
+    container.innerHTML = data.map(item => `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+            <div>
+                <strong>${item.department}</strong><br>
+                <small class="text-muted">${item.step_name}</small>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-warning">${item.avg_time_hours.toFixed(1)}h</span><br>
+                <small class="text-muted">${item.request_count} requests</small>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayDepartmentRanking(data) {
+    const container = document.getElementById('departmentRanking');
+    
+    if (data.length === 0) {
+        container.innerHTML = '<p class="text-muted">No department data available</p>';
+        return;
+    }
+    
+    container.innerHTML = data.map((dept, index) => `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 ${index === 0 ? 'bg-success text-white' : 'bg-light'} rounded">
+            <div>
+                <strong>${index + 1}. ${dept.name}</strong><br>
+                <small class="${index === 0 ? 'text-white-50' : 'text-muted'}">${dept.avg_time_hours.toFixed(1)}h avg</small>
+            </div>
+            <div class="text-end">
+                <span class="badge ${index === 0 ? 'bg-light text-dark' : 'bg-success'}">${dept.performance_score.toFixed(1)}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayMetricsTable(data) {
+    const tbody = document.getElementById('metricsTableBody');
+    
+    tbody.innerHTML = data.map(dept => `
+        <tr>
+            <td><strong>${dept.name}</strong></td>
+            <td>${dept.total_requests}</td>
+            <td>${dept.avg_approval_time_hours.toFixed(1)}h</td>
+            <td>${dept.approval_rate.toFixed(1)}%</td>
+            <td>${dept.pending_count}</td>
+            <td>
+                <span class="badge ${getPerformanceBadgeClass(dept.performance_score)}">
+                    ${dept.performance_score.toFixed(1)}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getPerformanceBadgeClass(score) {
+    if (score >= 8) return 'bg-success';
+    if (score >= 6) return 'bg-warning';
+    return 'bg-danger';
+}
+
+function refreshAnalytics() {
+    loadAnalytics();
+}
+
+function exportAnalytics() {
+    // Implementation for exporting analytics data
+    alert('Export functionality will be implemented next!');
+}
+
+function showLoading(show) {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const noDataMessage = document.getElementById('noDataMessage');
+    
+    if (show) {
+        loadingSpinner.style.display = 'block';
+        noDataMessage.style.display = 'none';
+    } else {
+        loadingSpinner.style.display = 'none';
+    }
+}
+
+function showError(message) {
+    // You can implement a toast notification system here
+    alert('Error: ' + message);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+request_id,current_department,next_department,priority,step_order,request_type,status,created_at,updated_at
+1,HR,IT,normal,1,hr,approved,2024-01-01T10:00:00,2024-01-01T11:00:00
+2,IT,Finance,high,1,it,approved,2024-01-02T10:00:00,2024-01-02T11:00:00
+3,Sales,Operations,normal,1,sales,approved,2024-01-03T10:00:00,2024-01-03T11:00:00

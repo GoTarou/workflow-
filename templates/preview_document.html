@@ -1,0 +1,1694 @@
+{% extends "base.html" %}
+
+{% block title %}Preview: {{ document.title }} - Document Workflow System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-eye me-2"></i>Document Preview
+        </h1>
+        <p class="text-muted mb-0">{{ document.title }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('view_document', doc_id=document.id) }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-2"></i>Back to Document
+        </a>
+        <a href="{{ url_for('uploaded_file', filename=document.filename) }}" 
+           class="btn btn-primary" target="_blank">
+            <i class="fas fa-download me-2"></i>Download
+        </a>
+    </div>
+</div>
+
+<!-- Document Info Bar -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <small class="text-muted">File:</small><br>
+                <strong>{{ document.filename }}</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted">Type:</small><br>
+                <span class="badge bg-secondary">{{ preview_type|title }}</span>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted">Status:</small><br>
+                <span class="status-{{ document.status }} status-badge">{{ document.status|title }}</span>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted">Priority:</small><br>
+                <span class="priority-{{ document.priority }} status-badge">{{ document.priority|title }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Document Preview Area -->
+    <div class="col-lg-9">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Document Preview
+                </h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="zoomIn">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="zoomOut">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="resetZoom">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="documentPreview" class="document-preview-container">
+                    {% if preview_type == 'pdf' %}
+                        <!-- PDF Preview using PDF.js -->
+                        <div class="pdf-container">
+                            <div id="pdfViewer" class="pdf-viewer">
+                                <div id="pdfCanvas" class="pdf-canvas">
+                                    <canvas id="pdfCanvasElement"></canvas>
+                                </div>
+                                <div id="pdfTextLayer" class="pdf-text-layer"></div>
+                            </div>
+                            <div class="pdf-controls mt-2 text-center">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span class="mx-3">Page <span id="pageNum">1</span> of <span id="pageCount">1</span></span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% elif preview_type == 'image' %}
+                        <!-- Image Preview -->
+                        <div class="image-container text-center">
+                            <img src="{{ url_for('uploaded_file', filename=document.filename) }}" 
+                                 class="img-fluid preview-image" alt="Document Preview"
+                                 id="previewImage">
+                        </div>
+                    {% elif preview_type == 'text' %}
+                        <!-- Text Preview -->
+                        <div class="text-container">
+                            <div class="text-preview" id="textPreview" contenteditable="true">{{ text_content or 'No content available' }}</div>
+                        </div>
+                    {% elif preview_type == 'office' %}
+                        <!-- Office Document Preview -->
+                        <div class="office-container text-center py-5">
+                            <i class="fas fa-file-word fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Office Document Preview</h5>
+                            <p class="text-muted">This document type requires download for full preview.</p>
+                            <a href="{{ url_for('uploaded_file', filename=document.filename) }}" 
+                               class="btn btn-primary" target="_blank">
+                                <i class="fas fa-download me-2"></i>Download to View
+                            </a>
+                        </div>
+                    {% else %}
+                        <!-- Generic Download -->
+                        <div class="download-container text-center py-5">
+                            <i class="fas fa-file fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">File Preview Not Available</h5>
+                            <p class="text-muted">This file type cannot be previewed in the browser.</p>
+                            <a href="{{ url_for('uploaded_file', filename=document.filename) }}" 
+                               class="btn btn-primary" target="_blank">
+                                <i class="fas fa-download me-2"></i>Download File
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Document Info
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Notes Section -->
+                <div class="mb-3">
+                    <label class="form-label">Review Notes:</label>
+                    <textarea class="form-control" id="reviewNotes" rows="4" 
+                              placeholder="Add your review notes here..."></textarea>
+                    <button type="button" class="btn btn-primary btn-sm w-100 mt-2" id="saveNotes">
+                        <i class="fas fa-save me-2"></i>Save Notes
+                    </button>
+                </div>
+                
+                <!-- Router AI Analysis Section -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-robot me-2 text-primary"></i>AI Analysis:
+                    </label>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="quickAnalysisBtn">
+                            <i class="fas fa-magic me-2"></i>Quick Analysis
+                        </button>
+                        <button type="button" class="btn btn-info btn-sm" id="extractTextBtn">
+                            <i class="fas fa-file-text me-2"></i>Extract Text
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="summarizeBtn">
+                            <i class="fas fa-compress-alt me-2"></i>Summarize
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm" id="classifyBtn">
+                            <i class="fas fa-tags me-2"></i>Classify
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- AI Analysis Results -->
+                <div class="mb-3" id="aiResultsSection" style="display: none;">
+                    <label class="form-label">AI Analysis Results:</label>
+                    <div id="aiResults" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Message Routing Section -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-route me-2 text-success"></i>Message Routing:
+                    </label>
+                    <div class="mb-2">
+                        <textarea class="form-control" id="employeeMessage" rows="3" 
+                                  placeholder="Enter employee message here..."></textarea>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm w-100" id="routeMessageBtn">
+                        <i class="fas fa-paper-plane me-2"></i>Route Message
+                    </button>
+                </div>
+                
+                <!-- Message Routing Results -->
+                <div class="mb-3" id="routingResultsSection" style="display: none;">
+                    <label class="form-label">Routing Results:</label>
+                    <div id="routingResults" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+                
+                                 <!-- Quick Actions -->
+                 <div class="mb-3">
+                     <label class="form-label">Quick Actions:</label>
+                     <div class="d-grid gap-2">
+                         <button type="button" class="btn btn-success btn-sm" id="approveBtn">
+                             <i class="fas fa-check me-2"></i>Approve
+                         </button>
+                         <button type="button" class="btn btn-danger btn-sm" id="rejectBtn">
+                             <i class="fas fa-times me-2"></i>Reject
+                         </button>
+                         <button type="button" class="btn btn-warning btn-sm" id="requestChangesBtn">
+                             <i class="fas fa-edit me-2"></i>Request Changes
+                         </button>
+                         <button type="button" class="btn btn-info btn-sm" id="testToolbarBtn">
+                             <i class="fas fa-bug me-2"></i>Test Toolbar
+                         </button>
+                         <button type="button" class="btn btn-warning btn-sm" id="fixPositionBtn">
+                             <i class="fas fa-crosshairs me-2"></i>Fix Position
+                         </button>
+                         <button type="button" class="btn btn-secondary btn-sm" id="cleanupTextBtn">
+                             <i class="fas fa-broom me-2"></i>Clean Text
+                         </button>
+                     </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Formatting Toolbar -->
+<div id="formattingToolbar" class="formatting-toolbar" style="display: none;">
+    <div class="toolbar-content">
+        <button type="button" class="toolbar-btn" id="underlineBtn" aria-label="Toggle Underline">
+            <i class="fas fa-underline"></i>
+        </button>
+        
+        <div class="color-picker-container">
+            <button type="button" class="toolbar-btn" id="colorBtn" aria-label="Change Text Color">
+                <i class="fas fa-palette"></i>
+            </button>
+            <div class="color-palette" id="colorPalette">
+                <button type="button" class="color-option" data-color="#000000" style="background-color: #000000;" aria-label="Black"></button>
+                <button type="button" class="color-option" data-color="#ff0000" style="background-color: #ff0000;" aria-label="Red"></button>
+                <button type="button" class="color-option" data-color="#00ff00" style="background-color: #00ff00;" aria-label="Green"></button>
+                <button type="button" class="color-option" data-color="#0000ff" style="background-color: #0000ff;" aria-label="Blue"></button>
+                <button type="button" class="color-option" data-color="#ffff00" style="background-color: #ffff00;" aria-label="Yellow"></button>
+                <button type="button" class="color-option" data-color="#ff00ff" style="background-color: #ff00ff;" aria-label="Magenta"></button>
+            </div>
+        </div>
+        
+        <div class="highlight-picker-container">
+            <button type="button" class="toolbar-btn" id="highlightBtn" aria-label="Toggle Highlight">
+                <i class="fas fa-highlighter"></i>
+            </button>
+            <div class="highlight-palette" id="highlightPalette">
+                <button type="button" class="highlight-option" data-color="#ffeb3b" style="background-color: #ffeb3b;" aria-label="Yellow Highlight"></button>
+                <button type="button" class="highlight-option" data-color="#ff9800" style="background-color: #ff9800;" aria-label="Orange Highlight"></button>
+                <button type="button" class="highlight-option" data-color="#f44336" style="background-color: #f44336;" aria-label="Red Highlight"></button>
+                <button type="button" class="highlight-option" data-color="#4caf50" style="background-color: #4caf50;" aria-label="Green Highlight"></button>
+                <button type="button" class="highlight-option" data-color="#2196f3" style="background-color: #2196f3;" aria-label="Blue Highlight"></button>
+                <button type="button" class="highlight-option" data-color="#9c27b0" style="background-color: #9c27b0;" aria-label="Purple Highlight"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Floating Formatting Toolbar -->
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+
+<script>
+// Set PDF.js worker path
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if PDF.js loaded properly
+    if (typeof pdfjsLib === 'undefined') {
+        console.error('PDF.js library failed to load!');
+        return;
+    }
+    
+    const toolbar = document.getElementById('formattingToolbar');
+    const textPreview = document.getElementById('textPreview');
+    let currentSelection = null;
+    let currentRange = null;
+    
+    // Color and highlight pickers
+    const colorPalette = document.getElementById('colorPalette');
+    const highlightPalette = document.getElementById('highlightPalette');
+    
+    // Show/hide color palettes
+    document.getElementById('colorBtn').addEventListener('click', function() {
+        colorPalette.style.display = colorPalette.style.display === 'none' ? 'flex' : 'none';
+        highlightPalette.style.display = 'none';
+    });
+    
+    document.getElementById('highlightBtn').addEventListener('click', function() {
+        highlightPalette.style.display = highlightPalette.style.display === 'none' ? 'flex' : 'none';
+        colorPalette.style.display = 'none';
+    });
+    
+    // Hide palettes when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.color-picker-container') && !e.target.closest('.highlight-picker-container')) {
+            colorPalette.style.display = 'none';
+            highlightPalette.style.display = 'none';
+        }
+    });
+    
+    // Text selection detection
+    function handleSelectionChange() {
+        console.log('Selection change detected');
+        
+        // Check if we're using PDF.js text layer
+        const textLayer = document.getElementById('pdfTextLayer');
+        if (textLayer && textLayer.children.length > 0) {
+            console.log('PDF.js text layer detected, checking selection');
+            const selection = window.getSelection();
+            
+            if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+                console.log('Valid PDF.js text selection:', selection.toString());
+                currentSelection = selection;
+                currentRange = selection.getRangeAt(0);
+                // Don't show toolbar immediately - wait for selection to complete
+                return;
+            }
+        }
+        
+        // Check main document selection
+        const selection = window.getSelection();
+        console.log('Main document selection:', selection.toString());
+        console.log('Range count:', selection.rangeCount);
+        console.log('Is collapsed:', selection.isCollapsed);
+        
+        if (selection.rangeCount > 0 && !selection.isCollapsed) {
+            console.log('Valid selection, but waiting for completion');
+            currentSelection = selection;
+            currentRange = selection.getRangeAt(0);
+            // Don't show toolbar immediately
+        } else {
+            console.log('No valid selection, hiding toolbar');
+            hideToolbar();
+        }
+    }
+    
+    // Right-click context menu
+    function handleContextMenu(e) {
+        e.preventDefault();
+        
+        const selection = window.getSelection();
+        
+        if (selection.rangeCount > 0 && !selection.isCollapsed) {
+            currentSelection = selection;
+            currentRange = selection.getRangeAt(0);
+            showToolbar();
+        } else {
+            // For PDFs and other documents, show toolbar in a fixed position
+            currentSelection = null;
+            currentRange = null;
+            
+            // Show toolbar in top-right corner
+            toolbar.style.left = 'auto';
+            toolbar.style.right = '20px';
+            toolbar.style.top = '20px';
+            toolbar.style.display = 'block';
+        }
+    }
+    
+    // Show toolbar at selection position
+    function showToolbar() {
+        if (!currentRange) {
+            return;
+        }
+        
+        let rect;
+        try {
+            rect = currentRange.getBoundingClientRect();
+        } catch (e) {
+            // Fallback: position toolbar in center of viewport
+            rect = {
+                left: window.innerWidth / 2,
+                top: window.innerHeight / 2,
+                width: 0,
+                height: 0,
+                bottom: window.innerHeight / 2
+            };
+        }
+        
+        // Calculate position
+        let left = rect.left + (rect.width / 2) - (toolbar.offsetWidth / 2);
+        let top = rect.top - toolbar.offsetHeight - 10;
+        
+        // Flip below if near top edge
+        if (top < 10) {
+            top = rect.bottom + 10;
+        }
+        
+        // Keep inside viewport
+        if (left < 10) left = 10;
+        if (left + toolbar.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - toolbar.offsetWidth - 10;
+        }
+        
+        // Ensure toolbar is visible and positioned
+        try {
+            toolbar.style.left = left + 'px';
+            toolbar.style.top = top + 'px';
+            toolbar.style.display = 'block';
+        } catch (e) {
+            // Fallback: show toolbar in top-right corner
+            toolbar.style.left = 'auto';
+            toolbar.style.right = '20px';
+            toolbar.style.top = '20px';
+            toolbar.style.display = 'block';
+        }
+    }
+    
+    // Hide toolbar
+    function hideToolbar() {
+        toolbar.style.display = 'none';
+        colorPalette.style.display = 'none';
+        highlightPalette.style.display = 'none';
+        currentSelection = null;
+        currentRange = null;
+    }
+    
+    // Apply inline style to selection
+    function applyInlineStyle(styleObj) {
+        if (!currentRange) return;
+        
+        const span = document.createElement('span');
+        Object.assign(span.style, styleObj);
+        
+        try {
+            currentRange.surroundContents(span);
+            currentSelection.removeAllRanges();
+            hideToolbar();
+        } catch (e) {
+            // Fallback for complex selections
+            const fragment = currentRange.extractContents();
+            span.appendChild(fragment);
+            currentRange.insertNode(span);
+            currentSelection.removeAllRanges();
+            hideToolbar();
+        }
+    }
+    
+    // Toggle underline
+    document.getElementById('underlineBtn').addEventListener('click', function() {
+        if (!currentRange) return;
+        
+        const selection = currentRange.cloneContents();
+        const hasUnderline = selection.querySelector('[style*="text-decoration: underline"]');
+        
+        if (hasUnderline) {
+            // Remove underline
+            const underlinedElements = currentRange.commonAncestorContainer.querySelectorAll('[style*="text-decoration: underline"]');
+            underlinedElements.forEach(el => {
+                el.style.textDecoration = 'none';
+                if (el.style.length === 0) {
+                    el.outerHTML = el.innerHTML;
+                }
+            });
+        } else {
+            // Add underline
+            applyInlineStyle({ textDecoration: 'underline' });
+        }
+        
+        hideToolbar();
+    });
+    
+    // Apply text color
+    colorPalette.addEventListener('click', function(e) {
+        if (e.target.classList.contains('color-option')) {
+            const color = e.target.dataset.color;
+            applyInlineStyle({ color: color });
+            colorPalette.style.display = 'none';
+        }
+    });
+    
+    // Apply highlight
+    highlightPalette.addEventListener('click', function(e) {
+        if (e.target.classList.contains('highlight-option')) {
+            const color = e.target.dataset.color;
+            const mark = document.createElement('mark');
+            mark.style.backgroundColor = color;
+            
+            try {
+                currentRange.surroundContents(mark);
+                currentSelection.removeAllRanges();
+                hideToolbar();
+            } catch (e) {
+                const fragment = currentRange.extractContents();
+                mark.appendChild(fragment);
+                currentRange.insertNode(mark);
+                currentSelection.removeAllRanges();
+                hideToolbar();
+            }
+        }
+    });
+    
+    // Event listeners
+    const documentPreview = document.getElementById('documentPreview');
+    
+    if (textPreview) {
+        textPreview.addEventListener('mouseup', handleSelectionChange);
+        textPreview.addEventListener('touchend', handleSelectionChange);
+        textPreview.addEventListener('keyup', handleSelectionChange);
+        textPreview.addEventListener('contextmenu', handleContextMenu);
+    } else {
+        // For PDF and other document types, add listeners to the preview container
+        if (documentPreview) {
+            documentPreview.addEventListener('mouseup', handleSelectionChange);
+            documentPreview.addEventListener('touchend', handleSelectionChange);
+            documentPreview.addEventListener('contextmenu', handleContextMenu);
+        }
+    }
+    
+    // Add global selection change listener
+    document.addEventListener('selectionchange', function() {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+            // Check if selection is within our document preview area
+            const range = selection.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            
+            if (documentPreview && documentPreview.contains(container)) {
+                currentSelection = selection;
+                currentRange = range;
+                // Don't show toolbar here - let mouse events handle it
+            }
+        }
+    });
+    
+    // Hide toolbar when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!toolbar.contains(e.target) && (!textPreview || !textPreview.contains(e.target))) {
+            hideToolbar();
+        }
+    });
+    
+    // ESC key to close toolbar
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideToolbar();
+        }
+        
+        // Ctrl+Shift+T to manually show toolbar (useful for PDFs)
+        if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+            if (toolbar) {
+                toolbar.style.left = 'auto';
+                toolbar.style.right = '20px';
+                toolbar.style.top = '20px';
+                toolbar.style.display = 'block';
+            }
+        }
+    });
+    
+    // Zoom controls
+    let currentZoom = 1;
+    document.getElementById('zoomIn').addEventListener('click', () => {
+        currentZoom = Math.min(currentZoom * 1.2, 3);
+        applyZoom();
+    });
+    
+    document.getElementById('zoomOut').addEventListener('click', () => {
+        currentZoom = Math.max(currentZoom / 1.2, 0.5);
+        applyZoom();
+    });
+    
+    document.getElementById('resetZoom').addEventListener('click', () => {
+        currentZoom = 1;
+        applyZoom();
+    });
+    
+    function applyZoom() {
+        const container = document.getElementById('documentPreview');
+        container.style.transform = `scale(${currentZoom})`;
+        container.style.transformOrigin = 'top left';
+    }
+    
+    // Save notes
+    document.getElementById('saveNotes').addEventListener('click', function() {
+        const notes = document.getElementById('reviewNotes').value;
+        if (notes.trim()) {
+            alert('Notes saved! (This would be saved to the database in a real implementation)');
+        }
+    });
+    
+    // Quick action buttons
+    document.getElementById('approveBtn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to approve this document?')) {
+            window.location.href = "{{ url_for('view_document', doc_id=document.id) }}";
+        }
+    });
+    
+    document.getElementById('rejectBtn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to reject this document?')) {
+            window.location.href = "{{ url_for('view_document', doc_id=document.id) }}";
+        }
+    });
+    
+    document.getElementById('requestChangesBtn').addEventListener('click', function() {
+        if (confirm('Request changes for this document?')) {
+            window.location.href = "{{ url_for('view_document', doc_id=document.id) }}";
+        }
+    });
+
+    // Test toolbar button
+    document.getElementById('testToolbarBtn').addEventListener('click', function() {
+        console.log('Test Toolbar button clicked!');
+        // Debug text layer positioning
+        debugTextLayerPosition();
+        
+        // Simulate a selection change to show the toolbar
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+            currentSelection = selection;
+            currentRange = selection.getRangeAt(0);
+            showToolbar();
+        } else {
+            // If no selection, try to show toolbar in a fixed position
+            toolbar.style.left = 'auto';
+            toolbar.style.right = '20px';
+            toolbar.style.top = '20px';
+            toolbar.style.display = 'block';
+        }
+    });
+
+    // Fix Position button
+    document.getElementById('fixPositionBtn').addEventListener('click', function() {
+        console.log('Fix Position button clicked!');
+        fixTextLayerPosition();
+        alert('Text layer position fixed.');
+    });
+
+    // Clean Text button
+    document.getElementById('cleanupTextBtn').addEventListener('click', function() {
+        console.log('Clean Text button clicked!');
+        cleanupDuplicateText();
+        alert('Text cleanup completed.');
+    });
+    
+    // Router AI Integration
+    const documentId = {{ document.id }};
+    
+    // Quick Analysis Button
+    document.getElementById('quickAnalysisBtn').addEventListener('click', function() {
+        performQuickAnalysis();
+    });
+    
+    // Extract Text Button
+    document.getElementById('extractTextBtn').addEventListener('click', function() {
+        extractTextWithAI();
+    });
+    
+    // Summarize Button
+    document.getElementById('summarizeBtn').addEventListener('click', function() {
+        summarizeDocument();
+    });
+    
+    // Classify Button
+    document.getElementById('classifyBtn').addEventListener('click', function() {
+        classifyDocument();
+    });
+
+    // Route Message Button
+    document.getElementById('routeMessageBtn').addEventListener('click', function() {
+        routeMessage();
+    });
+    
+    // Router AI Functions
+    async function performQuickAnalysis() {
+        const button = document.getElementById('quickAnalysisBtn');
+        const originalText = button.innerHTML;
+        
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+            
+            const response = await fetch(`/api/ai/quick-analysis/${documentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                displayAIResults('Quick Analysis Results', result.analysis_results);
+            } else {
+                showAIError('Quick analysis failed: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            showAIError('Quick analysis failed: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+    
+    async function extractTextWithAI() {
+        const button = document.getElementById('extractTextBtn');
+        const originalText = button.innerHTML;
+        
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Extracting...';
+            
+            const response = await fetch(`/api/ai/extract/${documentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                displayAIResults('Text Extraction Results', result.extracted_text);
+            } else {
+                showAIError('Text extraction failed: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            showAIError('Text extraction failed: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+    
+    async function summarizeDocument() {
+        const button = document.getElementById('summarizeBtn');
+        const originalText = button.innerHTML;
+        
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Summarizing...';
+            
+            const response = await fetch(`/api/ai/summarize/${documentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    summary_length: 'medium'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                displayAIResults('Document Summary', result.summary);
+            } else {
+                showAIError('Summarization failed: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            showAIError('Summarization failed: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+    
+    async function classifyDocument() {
+        const button = document.getElementById('classifyBtn');
+        const originalText = button.innerHTML;
+        
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Classifying...';
+            
+            const response = await fetch(`/api/ai/classify/${documentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                displayAIResults('Document Classification', result.classification);
+            } else {
+                showAIError('Classification failed: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            showAIError('Classification failed: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+
+    async function routeMessage() {
+        const message = document.getElementById('employeeMessage').value;
+        const button = document.getElementById('routeMessageBtn');
+        const originalText = button.innerHTML;
+
+        if (!message.trim()) {
+            alert('Please enter a message to route.');
+            return;
+        }
+
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Routing...';
+
+            const response = await fetch('/api/ai/route-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                displayRoutingResults('Message Routing Results', result.routing_results);
+            } else {
+                showRoutingError('Message routing failed: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            showRoutingError('Message routing failed: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+    
+    function displayAIResults(title, results) {
+        const resultsSection = document.getElementById('aiResultsSection');
+        const resultsDiv = document.getElementById('aiResults');
+        
+        let html = `<h6 class="text-primary mb-2">${title}</h6>`;
+        
+        if (typeof results === 'object') {
+            for (const [key, value] of Object.entries(results)) {
+                if (typeof value === 'object') {
+                    html += `<div class="mb-2"><strong>${key}:</strong><br>`;
+                    html += `<small class="text-muted">${JSON.stringify(value, null, 2)}</small></div>`;
+                } else {
+                    html += `<div class="mb-2"><strong>${key}:</strong> ${value}</div>`;
+                }
+            }
+        } else {
+            html += `<div>${results}</div>`;
+        }
+        
+        resultsDiv.innerHTML = html;
+        resultsSection.style.display = 'block';
+        
+        // Auto-hide after 30 seconds
+        setTimeout(() => {
+            resultsSection.style.display = 'none';
+        }, 30000);
+    }
+    
+    function showAIError(message) {
+        const resultsSection = document.getElementById('aiResultsSection');
+        const resultsDiv = document.getElementById('aiResults');
+        
+        resultsDiv.innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>${message}</div>`;
+        resultsSection.style.display = 'block';
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            resultsSection.style.display = 'none';
+        }, 10000);
+    }
+
+    function displayRoutingResults(title, results) {
+        const resultsSection = document.getElementById('routingResultsSection');
+        const resultsDiv = document.getElementById('routingResults');
+        
+        let html = `<h6 class="text-success mb-2">${title}</h6>`;
+        
+        if (typeof results === 'object') {
+            for (const [key, value] of Object.entries(results)) {
+                if (typeof value === 'object') {
+                    html += `<div class="mb-2"><strong>${key}:</strong><br>`;
+                    html += `<small class="text-muted">${JSON.stringify(value, null, 2)}</small></div>`;
+                } else {
+                    html += `<div class="mb-2"><strong>${key}:</strong> ${value}</div>`;
+                }
+            }
+        } else {
+            html += `<div>${results}</div>`;
+        }
+        
+        resultsDiv.innerHTML = html;
+        resultsSection.style.display = 'block';
+        
+        // Auto-hide after 30 seconds
+        setTimeout(() => {
+            resultsSection.style.display = 'none';
+        }, 30000);
+    }
+
+    function showRoutingError(message) {
+        const resultsSection = document.getElementById('routingResultsSection');
+        const resultsDiv = document.getElementById('routingResults');
+        
+        resultsDiv.innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>${message}</div>`;
+        resultsSection.style.display = 'block';
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            resultsSection.style.display = 'none';
+        }, 10000);
+    }
+    
+    // Enhanced PDF.js Implementation
+    let pdfDoc = null;
+    let pageNum = 1;
+    let pageRendering = false;
+    let pageNumPending = null;
+    let scale = 1.5;
+    
+    const canvas = document.getElementById('pdfCanvasElement');
+    const textLayer = document.getElementById('pdfTextLayer');
+    const pageNumSpan = document.getElementById('pageNum');
+    const pageCountSpan = document.getElementById('pageCount');
+    
+    if (canvas && textLayer) {
+        loadPDFEnhanced();
+    }
+    
+    function loadPDFEnhanced() {
+        const pdfUrl = "{{ url_for('uploaded_file', filename=document.filename) }}";
+        
+        // Check if we have a valid URL
+        if (!pdfUrl || pdfUrl === '') {
+            return;
+        }
+        
+        // Load the PDF with enhanced features
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        
+        loadingTask.promise.then(function(pdf) {
+            pdfDoc = pdf;
+            pageCountSpan.textContent = pdf.numPages;
+            
+            // Initial page render
+            renderPage(pageNum);
+        }).catch(function(error) {
+            // Show error message to user
+            const pdfContainer = document.querySelector('.pdf-container');
+            if (pdfContainer) {
+                pdfContainer.innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <h5>PDF Loading Error</h5>
+                        <p>Failed to load PDF: ${error.message}</p>
+                        <button class="btn btn-primary btn-sm" onclick="location.reload()">Retry</button>
+                    </div>
+                `;
+            }
+            
+            // Fallback to iframe if PDF.js fails
+            fallbackToIframe();
+        });
+        
+        // Add enhanced selection listener to the PDF viewer container
+        const pdfContainer = document.getElementById('pdfViewer');
+        if (pdfContainer) {
+            pdfContainer.addEventListener('mousedown', handleMouseDown);
+            pdfContainer.addEventListener('mouseup', handleMouseUp);
+        }
+    }
+    
+    function renderPage(num) {
+        pageRendering = true;
+        
+        // Show loading indicator
+        const pdfContainer = document.querySelector('.pdf-container');
+        if (pdfContainer) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loadingIndicator';
+            loadingDiv.className = 'alert alert-info m-3 text-center';
+            loadingDiv.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Rendering PDF page ${num}...</span>
+                </div>
+            `;
+            pdfContainer.appendChild(loadingDiv);
+        }
+        
+        // Get page
+        pdfDoc.getPage(num).then(function(page) {
+            const viewport = page.getViewport({scale: scale});
+            
+            // Prepare canvas
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            // Render PDF page into canvas context
+            const renderContext = {
+                canvasContext: canvas.getContext('2d'),
+                viewport: viewport
+            };
+            
+            const renderTask = page.render(renderContext);
+            
+            // Wait for rendering to finish
+            renderTask.promise.then(function() {
+                pageRendering = false;
+                
+                // Remove loading indicator
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+                
+                if (pageNumPending !== null) {
+                    // New page rendering is pending
+                    renderPage(pageNumPending);
+                    pageNumPending = null;
+                }
+                
+                // Render text layer with enhanced selection support
+                renderTextLayerEnhanced(page, viewport);
+                
+                // Add success message
+                console.log(`PDF page ${num} rendered successfully`);
+            }).catch(function(renderError) {
+                pageRendering = false;
+                console.error('PDF render error:', renderError);
+                
+                // Remove loading indicator
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+                
+                // Show error message
+                if (pdfContainer) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert alert-danger m-3';
+                    errorDiv.innerHTML = `<strong>Render Error:</strong> ${renderError.message}`;
+                    pdfContainer.appendChild(errorDiv);
+                }
+            });
+        }).catch(function(pageError) {
+            pageRendering = false;
+            console.error('PDF page error:', pageError);
+            
+            // Remove loading indicator
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+            
+            // Show error message
+            if (pdfContainer) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger m-3';
+                errorDiv.innerHTML = `<strong>Page Error:</strong> ${pageError.message}`;
+                pdfContainer.appendChild(errorDiv);
+            }
+        });
+        
+        // Update page counters
+        pageNumSpan.textContent = num;
+    }
+    
+    function renderTextLayerEnhanced(page, viewport) {
+        // Clear previous text layer completely
+        textLayer.innerHTML = '';
+        
+        // Get text content
+        page.getTextContent().then(function(textContent) {
+            console.log('Text content items:', textContent.items.length);
+            
+            // Filter out duplicate or empty text items
+            const uniqueTextItems = textContent.items.filter((item, index, array) => {
+                // Remove empty text
+                if (!item.str || item.str.trim() === '') return false;
+                
+                // Remove duplicate consecutive text
+                if (index > 0) {
+                    const prevItem = array[index - 1];
+                    if (prevItem.str === item.str && 
+                        Math.abs(prevItem.transform[4] - item.transform[4]) < 5 &&
+                        Math.abs(prevItem.transform[5] - item.transform[5]) < 5) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            console.log('Unique text items:', uniqueTextItems.length);
+            
+            // Create text layer with filtered content
+            pdfjsLib.renderTextLayer({
+                textContent: {
+                    ...textContent,
+                    items: uniqueTextItems
+                },
+                container: textLayer,
+                viewport: viewport,
+                textDivs: [],
+                // Use modern API to avoid deprecation warnings
+                textContentSource: {
+                    ...textContent,
+                    items: uniqueTextItems
+                }
+            });
+            
+            // Fix text layer positioning to match canvas
+            fixTextLayerPosition();
+            
+            // Add event listeners to text layer for selection
+            setupTextLayerEventsEnhanced();
+            
+            // Make text layer more visible and selectable
+            textLayer.style.opacity = '0.8';
+            textLayer.style.pointerEvents = 'auto';
+            textLayer.style.cursor = 'text';
+            
+            // Ensure text is selectable
+            const textSpans = textLayer.querySelectorAll('span');
+            textSpans.forEach(span => {
+                span.style.cursor = 'text';
+                span.style.userSelect = 'text';
+                span.style.webkitUserSelect = 'text';
+                span.style.mozUserSelect = 'text';
+                span.style.msUserSelect = 'text';
+            });
+        });
+    }
+    
+    // Fix text layer positioning to match canvas
+    function fixTextLayerPosition() {
+        const canvas = document.getElementById('pdfCanvasElement');
+        const textLayer = document.getElementById('pdfTextLayer');
+        
+        if (canvas && textLayer) {
+            // Get canvas position and dimensions
+            const canvasRect = canvas.getBoundingClientRect();
+            const containerRect = textLayer.parentElement.getBoundingClientRect();
+            
+            // Calculate the offset between canvas and container
+            const offsetX = canvasRect.left - containerRect.left;
+            const offsetY = canvasRect.top - containerRect.top;
+            
+            // Apply transform to align text layer with canvas
+            textLayer.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+            
+            // Set text layer dimensions to match canvas
+            textLayer.style.width = canvas.offsetWidth + 'px';
+            textLayer.style.height = canvas.offsetHeight + 'px';
+            
+            console.log('Text layer positioned:', { offsetX, offsetY, width: canvas.offsetWidth, height: canvas.offsetHeight });
+        }
+    }
+    
+    // Handle window resize to reposition text layer
+    window.addEventListener('resize', function() {
+        if (textLayer && textLayer.children.length > 0) {
+            setTimeout(fixTextLayerPosition, 100);
+        }
+    });
+    
+    // Clean up duplicate text spans
+    function cleanupDuplicateText() {
+        const textSpans = textLayer.querySelectorAll('span');
+        const seenText = new Set();
+        const positions = new Map();
+        
+        textSpans.forEach(span => {
+            const text = span.textContent.trim();
+            const rect = span.getBoundingClientRect();
+            const key = `${text}_${Math.round(rect.left)}_${Math.round(rect.top)}`;
+            
+            if (seenText.has(key)) {
+                // Remove duplicate span
+                span.remove();
+                console.log('Removed duplicate text span:', text);
+            } else {
+                seenText.add(key);
+                positions.set(key, { text, left: rect.left, top: rect.top });
+            }
+        });
+        
+        console.log('Text cleanup completed. Unique spans:', seenText.size);
+        return seenText.size;
+    }
+    
+    // Enhanced text selection helper
+    function enhanceTextSelection() {
+        // Force text selection to work better
+        const textLayer = document.getElementById('pdfTextLayer');
+        if (textLayer) {
+            // Clean up any duplicate text first
+            cleanupDuplicateText();
+            
+            // Make sure all text spans are selectable
+            const textSpans = textLayer.querySelectorAll('span');
+            textSpans.forEach(span => {
+                span.style.cursor = 'text';
+                span.style.userSelect = 'text';
+                span.style.webkitUserSelect = 'text';
+                span.style.mozUserSelect = 'text';
+                span.style.msUserSelect = 'text';
+                span.style.pointerEvents = 'auto';
+                
+                // Add click handler for individual spans
+                span.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    
+                    // Create a range for this span
+                    const range = document.createRange();
+                    range.selectNodeContents(this);
+                    
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    currentSelection = selection;
+                    currentRange = range;
+                    
+                    // Show toolbar immediately for clicked text
+                    showToolbar();
+                });
+            });
+            
+            console.log(`Enhanced ${textSpans.length} text spans for selection`);
+        }
+    }
+    
+    // Call enhancement after text layer is rendered
+    function setupTextLayerEventsEnhanced() {
+        // Simple and reliable event listeners
+        textLayer.addEventListener('mousedown', handleMouseDown);
+        textLayer.addEventListener('mouseup', handleMouseUp);
+        textLayer.addEventListener('touchend', handleTextSelection);
+        textLayer.addEventListener('contextmenu', handleContextMenu);
+        
+        // Make text layer selectable
+        textLayer.style.userSelect = 'text';
+        textLayer.style.webkitUserSelect = 'text';
+        textLayer.style.mozUserSelect = 'text';
+        textLayer.style.msUserSelect = 'text';
+        textLayer.style.cursor = 'text';
+        textLayer.style.pointerEvents = 'auto';
+        
+        // Enhance text selection after a short delay
+        setTimeout(enhanceTextSelection, 100);
+    }
+    
+    // Simplified and reliable text selection
+    function handleTextSelection() {
+        const selection = window.getSelection();
+        
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+            const selectedText = selection.toString().trim();
+            if (selectedText.length > 0) {
+                console.log('Text selected:', selectedText);
+                currentSelection = selection;
+                currentRange = selection.getRangeAt(0);
+                showToolbar();
+            }
+        } else {
+            hideToolbar();
+        }
+    }
+    
+    // Simple mouse up handler
+    function handleMouseUp(e) {
+        // Small delay to ensure selection is complete
+        setTimeout(handleTextSelection, 50);
+    }
+    
+    // Simple mouse down handler
+    function handleMouseDown(e) {
+        // Clear any existing selection timeout
+        if (selectionTimeout) {
+            clearTimeout(selectionTimeout);
+        }
+    }
+    
+    function queueRenderPage(num) {
+        if (pageRendering) {
+            pageNumPending = num;
+        } else {
+            renderPage(num);
+        }
+    }
+    
+    function onPrevPage() {
+        if (pageNum <= 1) {
+            return;
+        }
+        pageNum--;
+        queueRenderPage(pageNum);
+    }
+    
+    function onNextPage() {
+        if (pageNum >= pdfDoc.numPages) {
+            return;
+        }
+        pageNum++;
+        queueRenderPage(pageNum);
+    }
+    
+    // Page navigation event listeners
+    if (document.getElementById('prevPage')) {
+        document.getElementById('prevPage').addEventListener('click', onPrevPage);
+    }
+    if (document.getElementById('nextPage')) {
+        document.getElementById('nextPage').addEventListener('click', onNextPage);
+    }
+    
+    function fallbackToIframe() {
+        const pdfContainer = document.querySelector('.pdf-container');
+        if (pdfContainer) {
+            pdfContainer.innerHTML = `
+                <div class="alert alert-warning m-3">
+                    <h5>PDF.js Rendering Failed</h5>
+                    <p>Falling back to browser PDF viewer...</p>
+                </div>
+                <iframe src="{{ url_for('uploaded_file', filename=document.filename) }}#toolbar=1&navpanes=1&scrollbar=1" 
+                        width="100%" height="600px" frameborder="0"></iframe>
+            `;
+        }
+    }
+});
+</script>
+
+<style>
+.document-preview-container {
+    min-height: 400px;
+    overflow: auto;
+}
+
+.pdf-container iframe {
+    border: none;
+}
+
+/* PDF.js Viewer Styles */
+.pdf-viewer {
+    position: relative;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 600px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+    /* Add required CSS variable for PDF.js scaling */
+    --scale-factor: 1;
+}
+
+.pdf-canvas {
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: white;
+}
+
+.pdf-canvas canvas {
+    display: block !important;
+    max-width: 100%;
+    height: auto;
+    border: none;
+    background: white;
+    position: relative;
+    z-index: 1;
+    min-height: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.pdf-canvas canvas:empty::before {
+    content: "PDF loading...";
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.pdf-text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.9;
+    line-height: 1.0;
+    pointer-events: auto;
+    z-index: 2;
+    mix-blend-mode: normal;
+    /* Add required CSS variable for PDF.js scaling */
+    --scale-factor: 1;
+    cursor: text;
+    /* Ensure text layer covers exactly the same area as canvas */
+    width: 100%;
+    height: 100%;
+}
+
+.pdf-text-layer > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    pointer-events: auto;
+    background: transparent;
+    transition: background-color 0.1s ease;
+    /* Ensure text positioning is accurate */
+    font-size: inherit;
+    line-height: inherit;
+    /* Prevent text overlapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Ensure proper z-index stacking */
+    z-index: 1;
+}
+
+/* Prevent overlapping text spans */
+.pdf-text-layer > span + span {
+    z-index: 2;
+}
+
+/* Enhanced text selection styles */
+.pdf-text-layer ::selection {
+    background: rgba(0,123,255,0.4);
+    color: transparent;
+}
+
+.pdf-text-layer ::-moz-selection {
+    background: rgba(0,123,255,0.4);
+    color: transparent;
+}
+
+/* Hover effect for text spans */
+.pdf-text-layer > span:hover {
+    background: rgba(0,123,255,0.1);
+}
+
+/* PDF.js viewer specific styles */
+.pdfViewer {
+    position: relative;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.pdfViewer .page {
+    position: relative;
+    margin: 10px auto;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pdfViewer .textLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.2;
+    line-height: 1.0;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.pdfViewer .textLayer > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+.pdfViewer .textLayer ::selection {
+    background: rgba(0,0,255,0.3);
+    color: transparent;
+}
+
+.pdfViewer .textLayer ::-moz-selection {
+    background: rgba(0,0,255,0.3);
+    color: transparent;
+}
+
+.pdf-container {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 0;
+}
+
+.pdf-controls {
+    background: #ffffff;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-top: 15px;
+}
+
+.pdf-controls button {
+    margin: 0 5px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.pdf-controls button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.pdf-controls span {
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+}
+
+.image-container {
+    padding: 20px;
+}
+
+.preview-image {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.text-container {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.text-preview {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background: white;
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+    user-select: text;
+    cursor: text;
+    min-height: 200px;
+    outline: none;
+}
+
+.text-preview:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.text-preview:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.office-container, .download-container {
+    background-color: #f8f9fa;
+}
+
+/* Floating Formatting Toolbar */
+.formatting-toolbar {
+    position: fixed;
+    z-index: 9999;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    padding: 8px;
+    display: none;
+    min-width: 200px;
+    pointer-events: auto;
+}
+
+.toolbar-content {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f8f9fa;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: #495057;
+}
+
+.toolbar-btn:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+}
+
+.toolbar-btn:active {
+    transform: translateY(0);
+}
+
+/* Color and Highlight Pickers */
+.color-picker-container,
+.highlight-picker-container {
+    position: relative;
+}
+
+.color-palette,
+.highlight-palette {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    padding: 8px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 120px;
+    margin-bottom: 8px;
+}
+
+.color-option,
+.highlight-option {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.color-option:hover,
+.highlight-option:hover {
+    transform: scale(1.1);
+    border-color: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .col-lg-9 {
+        order: 2;
+    }
+    .col-lg-3 {
+        order: 1;
+        margin-bottom: 20px;
+    }
+    
+    .formatting-toolbar {
+        padding: 6px;
+    }
+    
+    .toolbar-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .color-palette,
+    .highlight-palette {
+        width: 100px;
+    }
+    
+    .color-option,
+    .highlight-option {
+        width: 20px;
+        height: 20px;
+    }
+}
+</style>
+{% endblock %}

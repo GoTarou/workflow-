@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Approvers - Document Workflow System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-users-cog me-2"></i>Manage Department Approvers
+        </h1>
+        <p class="text-muted mb-0">Assign and manage approvers for each department</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addApproverModal">
+            <i class="fas fa-plus me-2"></i>Add New Approver
+        </button>
+    </div>
+</div>
+
+<!-- Department Approvers Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Current Department Approvers
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="approversTable">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Approver</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Assigned</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="approversTableBody">
+                    <!-- Approvers will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <div id="noApproversMessage" class="text-center py-4" style="display: none;">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No Department Approvers</h5>
+            <p class="text-muted">Start by adding approvers for each department.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Approver Modal -->
+<div class="modal fade" id="addApproverModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Add Department Approver
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addApproverForm">
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Department *</label>
+                        <select class="form-select" id="department" required>
+                            <option value="">Select Department</option>
+                            <option value="HR">HR</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Facilities">Facilities</option>
+                            <option value="IT">IT</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="approver" class="form-label">Approver User *</label>
+                        <select class="form-select" id="approver" required>
+                            <option value="">Select User</option>
+                            <!-- Users will be populated here -->
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="addApproverBtn">
+                    <i class="fas fa-plus me-2"></i>Add Approver
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-question-circle me-2"></i>Confirm Action
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">
+                    <i class="fas fa-check me-2"></i>Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentAction = null;
+let currentApproverId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load approvers on page load
+    loadApprovers();
+    loadUsers();
+    
+    // Add approver button
+    document.getElementById('addApproverBtn').addEventListener('click', function() {
+        addApprover();
+    });
+    
+    // Confirm action button
+    document.getElementById('confirmActionBtn').addEventListener('click', function() {
+        executeAction();
+    });
+});
+
+async function loadApprovers() {
+    try {
+        const response = await fetch('/api/department-approvers');
+        const result = await response.json();
+        
+        if (result.success) {
+            displayApprovers(result.approvers);
+        } else {
+            showError('Failed to load approvers: ' + result.error);
+        }
+    } catch (error) {
+        showError('Failed to load approvers: ' + error.message);
+    }
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/users');
+        const result = await response.json();
+        
+        if (result.success) {
+            populateUserSelect(result.users);
+        } else {
+            showError('Failed to load users: ' + result.error);
+        }
+    } catch (error) {
+        showError('Failed to load users: ' + error.message);
+    }
+}
+
+function populateUserSelect(users) {
+    const select = document.getElementById('approver');
+    const approverUsers = users.filter(user => user.role === 'approver');
+    
+    select.innerHTML = '<option value="">Select User</option>';
+    approverUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.username} (${user.email})`;
+        select.appendChild(option);
+    });
+}
+
+function displayApprovers(approvers) {
+    const tableBody = document.getElementById('approversTableBody');
+    const noApproversMessage = document.getElementById('noApproversMessage');
+    
+    if (approvers.length === 0) {
+        tableBody.innerHTML = '';
+        noApproversMessage.style.display = 'block';
+        return;
+    }
+    
+    noApproversMessage.style.display = 'none';
+    
+    tableBody.innerHTML = approvers.map(approver => `
+        <tr>
+            <td>
+                <span class="badge bg-info">${approver.department}</span>
+            </td>
+            <td>
+                <strong>${approver.approver_name}</strong>
+            </td>
+            <td>${approver.approver_email}</td>
+            <td>
+                ${approver.is_active ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    '<span class="badge bg-secondary">Inactive</span>'
+                }
+            </td>
+            <td>
+                <small class="text-muted">
+                    ${new Date(approver.created_at).toLocaleDateString()}
+                </small>
+            </td>
+            <td>
+                ${approver.is_active ? 
+                    `<button class="btn btn-sm btn-outline-danger" onclick="confirmRemoveApprover(${approver.id}, '${approver.department}', '${approver.approver_name}')">
+                        <i class="fas fa-user-minus"></i>
+                    </button>` : 
+                    '<span class="text-muted">No actions</span>'
+                }
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function addApprover() {
+    const department = document.getElementById('department').value;
+    const approverId = document.getElementById('approver').value;
+    
+    if (!department || !approverId) {
+        showError('Please select both department and approver.');
+        return;
+    }
+    
+    const addBtn = document.getElementById('addApproverBtn');
+    const originalText = addBtn.innerHTML;
+    
+    try {
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+        
+        const response = await fetch('/api/department-approvers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                department: department,
+                approver_id: parseInt(approverId)
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('Department approver added successfully!');
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addApproverModal'));
+            modal.hide();
+            document.getElementById('addApproverForm').reset();
+            
+            // Reload approvers
+            loadApprovers();
+        } else {
+            showError('Failed to add approver: ' + result.error);
+        }
+        
+    } catch (error) {
+        showError('Failed to add approver: ' + error.message);
+    } finally {
+        addBtn.disabled = false;
+        addBtn.innerHTML = originalText;
+    }
+}
+
+function confirmRemoveApprover(approverId, department, approverName) {
+    currentAction = 'remove';
+    currentApproverId = approverId;
+    
+    document.getElementById('confirmMessage').innerHTML = 
+        `Are you sure you want to remove <strong>${approverName}</strong> as the approver for <strong>${department}</strong> department?`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+}
+
+async function executeAction() {
+    if (currentAction === 'remove') {
+        await removeApprover(currentApproverId);
+    }
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+    modal.hide();
+    
+    // Reset
+    currentAction = null;
+    currentApproverId = null;
+}
+
+async function removeApprover(approverId) {
+    try {
+        const response = await fetch(`/api/department-approvers/${approverId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('Department approver removed successfully!');
+            loadApprovers();
+        } else {
+            showError('Failed to remove approver: ' + result.error);
+        }
+        
+    } catch (error) {
+        showError('Failed to remove approver: ' + error.message);
+    }
+}
+
+function showSuccess(message) {
+    // You can implement a toast notification system here
+    alert('Success: ' + message);
+}
+
+function showError(message) {
+    // You can implement a toast notification system here
+    alert('Error: ' + message);
+}
+</script>
+
+<style>
+.badge {
+    font-size: 0.875em;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
