@@ -272,6 +272,7 @@ Step 4: Return the result in structured JSON:
                 headers=self.get_headers(),
                 json=payload,
                 timeout=30
+            
             )
             
             if response.status_code == 200:
